@@ -10,7 +10,7 @@ import datetime as dt
 import json
 import time
 from pathlib import Path
-from typing import Protocol
+from typing import Protocol, runtime_checkable
 
 from .fixtures import anchor
 from .scenarios import Scenario
@@ -36,6 +36,7 @@ class RunResult:
         self.latency_ms = latency_ms
 
 
+@runtime_checkable
 class AgentUnderTest(Protocol):
     def run(self, scenario: Scenario) -> RunResult: ...
 
