@@ -18,8 +18,12 @@ def create_agent(entry_point: str, model=None):
         raise ValueError(f"entry_point must be one of {ENTRY_POINTS}, got {entry_point!r}")
     from deepagents import create_deep_agent
 
-    return create_deep_agent(
+    tools = profile_tools(entry_point)
+    agent = create_deep_agent(
         model=model if model is not None else chat_model(),
-        tools=profile_tools(entry_point),
+        tools=tools,
         system_prompt=system_prompt(entry_point),
     )
+    # expose the bound tool surface for introspection/tests (setattr verified safe)
+    agent.pmf_tools = tools
+    return agent

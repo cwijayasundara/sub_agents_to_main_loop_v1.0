@@ -24,6 +24,6 @@ def system_prompt(entry_point: str) -> str:
         f"{scheduled_extra}"
         "How to present: concise, figures first, caveats explicit. If data is only "
         "complete through a date, say so.\n"
-        "Writes: propose changes with propose_campaign_change; proposals stay pending "
-        "until a human approves. Never claim a change was applied.\n"
+        "Writes: propose changes with propose_campaign_change; every change requires "
+        "human approval before anything is applied. Never claim a change was applied.\n"
     )

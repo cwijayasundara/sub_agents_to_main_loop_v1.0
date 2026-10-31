@@ -11,7 +11,7 @@ def test_slack_profile_binds_all_tools():
     from pmf_agent.agent import create_agent
 
     agent = create_agent("slack", model=_fake_model())
-    names = {t.name for t in agent.tools}
+    names = {t.name for t in agent.pmf_tools}
     from pmf_agent.tools import ALL_TOOL_NAMES
 
     assert names == set(ALL_TOOL_NAMES)
@@ -22,7 +22,7 @@ def test_scheduled_profile_is_read_only():
     from pmf_agent.tools import READ_TOOL_NAMES
 
     agent = create_agent("scheduled", model=_fake_model())
-    names = {t.name for t in agent.tools}
+    names = {t.name for t in agent.pmf_tools}
     assert names == set(READ_TOOL_NAMES)
     assert "propose_campaign_change" not in names
 
