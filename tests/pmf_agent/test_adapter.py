@@ -1,5 +1,4 @@
 from langchain_core.messages import AIMessage, HumanMessage, ToolMessage
-from langchain_core.messages.usage_metadata import UsageMetadata
 
 from pmf_evals.runner import AgentUnderTest
 from pmf_evals.scenarios import Scenario
@@ -12,12 +11,12 @@ def _msgs():
         AIMessage(
             "",
             tool_calls=[{"name": "compare_platform_windows", "args": {}, "id": "c1"}],
-            usage_metadata=UsageMetadata(input_tokens=100, output_tokens=10, total_tokens=110),
+            usage_metadata={"input_tokens": 100, "output_tokens": 10, "total_tokens": 110},
         ),
         ToolMessage("{}", tool_call_id="c1"),
         AIMessage(
             "google spend was up.",
-            usage_metadata=UsageMetadata(input_tokens=200, output_tokens=30, total_tokens=230),
+            usage_metadata={"input_tokens": 200, "output_tokens": 30, "total_tokens": 230},
         ),
     ]
 
