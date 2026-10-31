@@ -46,3 +46,19 @@ def test_cli_run_and_compare(tmp_path):
     )
     assert r3.returncode == 0, r3.stderr
     assert json.loads(r3.stdout)["flipped"] == {}
+
+
+def test_fireworks_agent_registered_lazily():
+    """--agent fireworks resolves; pmf_agent is imported only when selected."""
+    import subprocess
+    import sys
+
+    from pmf_evals.__main__ import _AGENTS
+
+    assert "fireworks" in _AGENTS
+    # laziness must hold in a fresh interpreter that only imports the CLI module
+    out = subprocess.run(
+        [sys.executable, "-c", "import pmf_evals.__main__, sys; print('pmf_agent' in sys.modules)"],
+        capture_output=True, text=True, check=True,
+    )
+    assert out.stdout.strip() == "False"

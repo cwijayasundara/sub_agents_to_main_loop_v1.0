@@ -18,7 +18,15 @@ from .report import compare
 from .runner import run_suite
 from .scenarios import GOLDEN_PATH, load_scenarios
 
-_AGENTS = {"echo": EchoAgent}
+
+def _fireworks_agent():
+    """Lazily import pmf_agent so the CLI loads without the agent stack."""
+    from pmf_agent.adapter import FireworksAgentUnderTest
+
+    return FireworksAgentUnderTest(entry_point="slack")
+
+
+_AGENTS = {"echo": EchoAgent, "fireworks": _fireworks_agent}
 
 
 def _cmd_run(args: argparse.Namespace) -> int:
