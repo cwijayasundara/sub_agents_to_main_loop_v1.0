@@ -155,3 +155,11 @@ ALL_TOOL_NAMES = (
 )
 
 READ_TOOL_NAMES = tuple(n for n in ALL_TOOL_NAMES if n != "propose_campaign_change")
+
+# name -> tool object, for profile assembly
+_tool_registry = {
+    "list_platforms": list_platforms,
+    "check_platform_performance": check_platform_performance,
+    "compare_platform_windows": compare_platform_windows,
+    "propose_campaign_change": propose_campaign_change,
+}
