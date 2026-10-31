@@ -1,0 +1,84 @@
+"""CLI: run scenarios against an agent, grade results, compare two runs.
+
+    python -m pmf_evals run --agent echo --out results.jsonl
+    python -m pmf_evals grade --results results.jsonl --out graded.json
+    python -m pmf_evals compare run_a.jsonl run_b.jsonl
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import sys
+from pathlib import Path
+
+from .echo_agent import EchoAgent
+from .grader import grade_result
+from .report import compare
+from .runner import run_suite
+from .scenarios import GOLDEN_PATH, load_scenarios
+
+_AGENTS = {"echo": EchoAgent}
+
+
+def _cmd_run(args: argparse.Namespace) -> int:
+    scenarios = load_scenarios(args.scenarios or GOLDEN_PATH)
+    agent = _AGENTS[args.agent]()
+    rows = run_suite(agent, scenarios, args.out)
+    print(f"ran {len(rows)} scenarios -> {args.out}")
+    return 0
+
+
+def _cmd_grade(args: argparse.Namespace) -> int:
+    scenarios = load_scenarios(args.scenarios or GOLDEN_PATH)
+    reports = []
+    for line in Path(args.results).read_text().splitlines():
+        row = json.loads(line)
+        reports.append(grade_result(row, scenarios))
+    out = {"results": str(args.results), "reports": reports}
+    if args.out:
+        Path(args.out).write_text(json.dumps(out, indent=2))
+    errors = sum(1 for r in reports if r["verdict"] == "error")
+    fails = sum(1 for r in reports if r["verdict"] == "fail")
+    print(f"graded {len(reports)}: {fails} fail, {errors} error")
+    return 0
+
+
+def _cmd_compare(args: argparse.Namespace) -> int:
+    def load_graded(path: str) -> list[dict]:
+        scenarios = load_scenarios(GOLDEN_PATH)
+        rows = [json.loads(l) for l in Path(path).read_text().splitlines()]
+        return [grade_result(r, scenarios) | {"latency_ms": r["latency_ms"], "cost_usd": r["cost_usd"]} for r in rows]
+
+    report = compare(load_graded(args.run_a), load_graded(args.run_b))
+    print(json.dumps(report, indent=2))
+    return 0
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="pmf_evals")
+    sub = parser.add_subparsers(dest="cmd", required=True)
+
+    p_run = sub.add_parser("run")
+    p_run.add_argument("--agent", choices=sorted(_AGENTS), default="echo")
+    p_run.add_argument("--out", default="results.jsonl")
+    p_run.add_argument("--scenarios")
+    p_run.set_defaults(func=_cmd_run)
+
+    p_grade = sub.add_parser("grade")
+    p_grade.add_argument("--results", required=True)
+    p_grade.add_argument("--out")
+    p_grade.add_argument("--scenarios")
+    p_grade.set_defaults(func=_cmd_grade)
+
+    p_cmp = sub.add_parser("compare")
+    p_cmp.add_argument("run_a")
+    p_cmp.add_argument("run_b")
+    p_cmp.set_defaults(func=_cmd_compare)
+
+    args = parser.parse_args(argv)
+    return args.func(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
