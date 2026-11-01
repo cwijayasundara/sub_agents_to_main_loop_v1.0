@@ -69,3 +69,25 @@ def test_propose_creates_pending_proposal_only():
     assert result["status"] == "pending"
     assert result["proposal_id"]
     assert "apply" not in ALL_TOOL_NAMES  # the write gate is structural
+
+
+def test_propose_writes_through_to_store(tmp_path, monkeypatch):
+    import json as _json
+
+    from pmf_agent import tools
+
+    monkeypatch.setenv("PMF_STORE_DIR", str(tmp_path))
+    result = propose_campaign_change.invoke(
+        {
+            "platform": "meta_ads",
+            "change_type": "update_budget",
+            "details": "$3,000 -> $3,500/week",
+            "rationale": "test write-through",
+        }
+    )
+    assert result["status"] == "pending"  # no 'error' key: submit succeeded
+    persisted = _json.loads(
+        (tmp_path / "proposals" / f"{result['proposal_id']}.json").read_text()
+    )
+    assert persisted["status"] == "pending"
+    assert persisted["details"] == "$3,000 -> $3,500/week"

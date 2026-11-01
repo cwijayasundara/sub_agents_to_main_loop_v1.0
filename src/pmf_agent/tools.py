@@ -9,7 +9,6 @@ exists in this process, so the model cannot bypass approval.
 from __future__ import annotations
 
 import datetime as dt
-import uuid
 from typing import Any
 
 from langchain_core.tools import tool
@@ -23,8 +22,7 @@ WINDOWS = {
 }
 METRICS = ("spend", "conversions", "cpa")
 
-# proposals live in-process; a real deployment persists these behind the approval server
-_PROPOSALS: list[dict] = []
+# proposals persist via the ProposalStore (see get_proposal_store)
 
 
 def _resolve_window(name: str) -> tuple[dt.date, dt.date] | None:
@@ -126,7 +124,7 @@ def propose_campaign_change(
     """Propose a campaign change (keywords, budget, targeting, copy) for human approval.
 
     The proposal is created in `pending` state only. It is NEVER applied by the
-    agent — a human approves it and code applies it.
+    agent - a human approves it and code applies it.
 
     Args:
         platform: one of google_ads, meta_ads, reddit_ads
@@ -134,16 +132,12 @@ def propose_campaign_change(
         details: the exact proposed change (keywords with match types, before/after values, etc.)
         rationale: why, grounded in the performance data just observed
     """
-    proposal = {
-        "proposal_id": f"prop-{uuid.uuid4().hex[:8]}",
-        "status": "pending",
-        "platform": platform,
-        "change_type": change_type,
-        "details": details,
-        "rationale": rationale,
-        "note": "pending human approval; the agent cannot apply changes",
-    }
-    _PROPOSALS.append(proposal)
+    try:
+        proposal = get_proposal_store().submit(
+            platform=platform, change_type=change_type, details=details, rationale=rationale
+        )
+    except ValueError as e:
+        return {"error": str(e), "known_platforms": sorted(PLATFORMS)}
     return proposal
 
 
@@ -163,3 +157,19 @@ _tool_registry = {
     "compare_platform_windows": compare_platform_windows,
     "propose_campaign_change": propose_campaign_change,
 }
+
+
+def get_proposal_store():
+    """The store the agent's proposals go through.
+
+    Rooted at the workspace unless PMF_STORE_DIR overrides it (tests, deploys).
+    Import here to avoid a circular import (approval imports PLATFORMS from tools).
+    """
+    import os
+    from pathlib import Path
+
+    from .approval import ProposalStore
+
+    root = os.environ.get("PMF_STORE_DIR") or Path(__file__).resolve().parents[2] / "workspace"
+    allowlist = Path(root) / "approvers.txt"
+    return ProposalStore(root, allowlist_path=allowlist)
