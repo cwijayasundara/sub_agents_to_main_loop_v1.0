@@ -101,3 +101,12 @@ def test_unrouted_adapter_has_no_selections():
     scenario = Scenario(id="q01_x", entry_point="slack", category="q_and_a", prompt="p")
     adapter = FireworksAgentUnderTest(entry_point="slack", model=_fake_model())
     assert adapter.run(scenario).selections is None
+
+
+def test_adapter_passes_skills_root():
+    from pmf_agent.adapter import FireworksAgentUnderTest as A
+
+    adapter = A(entry_point="slack", model=_fake_model(), skills_root="workspace")
+    adapter.run(Scenario(id="q01_x", entry_point="slack", category="q_and_a", prompt="p"))
+    # graph was built with the workspace backend; just proves the wiring accepts it
+    assert adapter._skills_root == "workspace"

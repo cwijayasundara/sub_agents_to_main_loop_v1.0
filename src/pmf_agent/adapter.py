@@ -51,12 +51,13 @@ def extract_usage(messages: list) -> dict[str, int]:
 class FireworksAgentUnderTest:
     """AgentUnderTest implementation backed by the folded single loop."""
 
-    def __init__(self, entry_point: str = "slack", model=None, routed: bool = False) -> None:
+    def __init__(self, entry_point: str = "slack", model=None, routed: bool = False, skills_root: str | None = None) -> None:
         if entry_point not in ENTRY_POINTS:
             raise ValueError(f"entry_point must be one of {ENTRY_POINTS}, got {entry_point!r}")
         self.entry_point = entry_point
         self._model = model
         self.routed = routed
+        self._skills_root = skills_root
         self._middleware = None
         self._graph = None
 
@@ -65,8 +66,13 @@ class FireworksAgentUnderTest:
             from .routing import tool_selection_middleware
 
             self._middleware = tool_selection_middleware()
-            return create_agent(self.entry_point, model=self._model, middleware=[self._middleware])
-        return create_agent(self.entry_point, model=self._model)
+            return create_agent(
+                self.entry_point,
+                model=self._model,
+                middleware=[self._middleware],
+                skills_root=self._skills_root,
+            )
+        return create_agent(self.entry_point, model=self._model, skills_root=self._skills_root)
 
     @property
     def graph(self):

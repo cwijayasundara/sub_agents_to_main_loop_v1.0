@@ -68,3 +68,9 @@ def test_fireworks_routed_registered_lazily():
     from pmf_evals.__main__ import _AGENTS
 
     assert "fireworks-routed" in _AGENTS
+
+
+def test_fireworks_skills_registered_lazily():
+    from pmf_evals.__main__ import _AGENTS
+
+    assert "fireworks-skills" in _AGENTS

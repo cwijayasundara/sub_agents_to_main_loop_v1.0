@@ -19,17 +19,18 @@ from .runner import run_suite
 from .scenarios import GOLDEN_PATH, load_scenarios
 
 
-def _fireworks_agent(routed: bool = False):
+def _fireworks_agent(routed: bool = False, skills_root: str | None = None):
     """Lazily import pmf_agent so the CLI loads without the agent stack."""
     from pmf_agent.adapter import FireworksAgentUnderTest
 
-    return FireworksAgentUnderTest(entry_point="slack", routed=routed)
+    return FireworksAgentUnderTest(entry_point="slack", routed=routed, skills_root=skills_root)
 
 
 _AGENTS = {
     "echo": EchoAgent,
     "fireworks": lambda: _fireworks_agent(routed=False),
     "fireworks-routed": lambda: _fireworks_agent(routed=True),
+    "fireworks-skills": lambda: _fireworks_agent(skills_root="workspace"),
 }
 
 
