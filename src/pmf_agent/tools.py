@@ -34,27 +34,8 @@ def _shifted():
     return shift_dataset(load_dataset(), shipped_offset())
 
 
-@tool
-def list_platforms() -> dict[str, Any]:
-    """Discover which ad platforms and metrics are available, and the data anchor date."""
-    return {
-        "platforms": list(PLATFORMS),
-        "metrics": list(METRICS),
-        "anchor": anchor().isoformat(),
-        "windows": sorted(WINDOWS),
-    }
-
-
-@tool
-def check_platform_performance(platform: str, window: str) -> dict[str, Any]:
-    """Check one ad platform's performance (spend, conversions, CPA) over a window.
-
-    Use for "how much did we spend / how did X do" questions about a single platform.
-
-    Args:
-        platform: one of google_ads, meta_ads, reddit_ads
-        window: one of last_week, prior_week, last_30d
-    """
+def _platform_window_totals(platform: str, window: str) -> dict[str, Any]:
+    """Shared core for the platform performance check (tool and subagent variants)."""
     if platform not in PLATFORMS:
         return {
             "error": f"unknown platform {platform!r}; known platforms: {', '.join(sorted(PLATFORMS))}",
@@ -76,6 +57,30 @@ def check_platform_performance(platform: str, window: str) -> dict[str, Any]:
         "source": "ad platform (fixture)",  # source-of-truth rule: media metrics live with the ad platform
         "data_complete_through": anchor().isoformat(),
     }
+
+
+@tool
+def list_platforms() -> dict[str, Any]:
+    """Discover which ad platforms and metrics are available, and the data anchor date."""
+    return {
+        "platforms": list(PLATFORMS),
+        "metrics": list(METRICS),
+        "anchor": anchor().isoformat(),
+        "windows": sorted(WINDOWS),
+    }
+
+
+@tool
+def check_platform_performance(platform: str, window: str) -> dict[str, Any]:
+    """Check one ad platform's performance (spend, conversions, CPA) over a window.
+
+    Use for "how much did we spend / how did X do" questions about a single platform.
+
+    Args:
+        platform: one of google_ads, meta_ads, reddit_ads
+        window: one of last_week, prior_week, last_30d
+    """
+    return _platform_window_totals(platform, window)
 
 
 @tool
