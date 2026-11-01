@@ -6,56 +6,123 @@ using the doctrine from Anthropic's
 with intent-routed tool selection from
 [decision_harness](https://github.com/cwijayasundara/deep_agents_utils_v1.0).
 
-See **[PROPOSAL.md](PROPOSAL.md)** for the full research synthesis and staged plan.
+**Verdict of the Stage 5 A/B** ([`results/ab-report.md`](results/ab-report.md)):
+the folded single loop wins 15/15 vs 12/15 at 1.8× less latency — the
+hierarchical architecture failed in exactly the ways the article predicts
+(lossy handoffs, skill/ability mismatch, delegation without synthesis).
 
-## Stage 0 (this repo, current state): eval harness
+See **[PROPOSAL.md](PROPOSAL.md)** for the full research synthesis.
 
-Eval-first, per the Anthropic doctrine: no architecture changes are made before
-a task-completion eval exists to measure them.
+## How to run the app
 
-- **Fixtures** (`src/pmf_evals/fixtures.py`): deterministic synthetic daily rows
-  for google_ads / meta_ads / reddit_ads, generated against a fixed anchor and
-  date-shifted at load, so "last week vs prior week" is always answerable and
-  ground-truth totals are shift-invariant. Built-in movers: Google spikes, Meta
-  dips, Reddit flat.
-- **Golden set** (`evals/scenarios/golden.json`): 15 scenarios across
-  `weekly_report` (5), `q_and_a` (5), `write_proposal` (3), `cross_platform`
-  (2), each with rubric criteria and, where deterministic,
-  `(platform, window, metric)` figure specs the grader computes exactly.
-- **Runner** (`src/pmf_evals/runner.py`): agent-agnostic (`AgentUnderTest`
-  protocol); one JSONL row per scenario with tokens, cost, latency, tool calls;
-  agent crashes become `failed` rows, never suite crashes.
-- **Grader** (`src/pmf_evals/grader.py`): deterministic numeric checks
-  (currency/separator tolerant, date-immune) + rubric criteria (`skipped`
-  offline, pass/fail with a judge callable).
-- **Flip report** (`src/pmf_evals/report.py`): per-scenario verdicts, flipped
-  tasks, and latency/cost aggregates for the Stage 5 A/B.
-- **EchoAgent**: quotes fixture ground truth; proves the pipeline end to end.
+There are three runnable surfaces: the **eval harness** (run/grade/compare the
+15 golden scenarios against any agent), the **agent CLI registry** (five
+swap-in architectures), and the **approval CLI** (the human side of the
+write gate).
 
-## Usage
+### 1. Setup
 
 ```bash
-pip install -e ".[dev]"
-pytest                                                        # 28 tests
-python -m pmf_evals run --agent echo --out results/smoke.jsonl
-python -m pmf_evals grade --results results/smoke.jsonl
-python -m pmf_evals compare results/a.jsonl results/b.jsonl
+# Python 3.11+
+python -m venv .venv && source .venv/bin/activate
+pip install -e ".[dev]"        # pmf_evals + pmf_agent + pytest
 ```
 
-Set `PMF_FIXTURE_ANCHOR=YYYY-MM-DD` to pin the replay date.
+Copy `.env-template` to `.env` and fill in what you need:
 
-## Stages (per PROPOSAL.md) — all complete
+| Key | Required for |
+|---|---|
+| `FIREWORKS_API_KEY` | any `fireworks*` agent (live LLM runs) |
+| `DECISIONS_API_KEY` or `OPENAI_API_KEY` | intent-routed tool selection (optional — without it, routing degrades to keep-all-tools) |
+| `PMF_FIXTURE_ANCHOR` | pinning the fixture replay date (optional; default = today−2) |
+| `PMF_STORE_DIR` | proposal store root (optional; default `workspace/`) |
+| `PMF_APPROVERS` | approver allowlist (optional; alternative to `workspace/approvers.txt`, fail-closed if both absent) |
+
+### 2. Run the tests (no keys needed)
+
+```bash
+pytest          # 89 tests, fully offline (fixtures + fake models)
+```
+
+### 3. Run the eval suite
+
+```bash
+# offline sanity: EchoAgent quotes fixture ground truth, 15/15 by construction
+python -m pmf_evals run --agent echo --out results/smoke.jsonl
+python -m pmf_evals grade --results results/smoke.jsonl
+
+# live runs (needs FIREWORKS_API_KEY): pick an architecture
+python -m pmf_evals run --agent fireworks             --out results/fw.jsonl            # folded single loop
+python -m pmf_evals run --agent fireworks-routed      --out results/fw-routed.jsonl     # + Decisions intent routing
+python -m pmf_evals run --agent fireworks-skills      --out results/fw-skills.jsonl     # + skills/wiki
+python -m pmf_evals run --agent fireworks-hierarchical --out results/fw-hier.jsonl      # parent + platform subagents
+
+# grade + compare two architectures (the flip report)
+python -m pmf_evals grade --results results/fw-hier.jsonl --out results/fw-hier-graded.json
+python -m pmf_evals compare results/fw-skills.jsonl results/fw-hier.jsonl
+```
+
+`compare` prints per-scenario verdicts, which tasks **flipped**, and
+latency/cost aggregates — any pass→fail flip blocks an architecture change.
+
+### 4. Run the approval workflow (analysis → action)
+
+The agent can only *propose*; a human approves; code applies and verifies:
+
+```bash
+# 1) get a proposal: run an agent scenario (e.g. q11) or propose via the tool;
+#    proposals land in $PMF_STORE_DIR/proposals/ as pending JSON
+python -m pmf_agent.approval_cli list --store workspace
+
+# 2) authorize approvers (IDs are arbitrary strings, e.g. Slack user IDs)
+printf "U123\nU777\n" > workspace/approvers.txt
+
+# 3) approve + apply (permission-checked; non-approvers are refused, proposal stays pending)
+python -m pmf_agent.approval_cli approve prop-abc123 --approver U123 --store workspace
+python -m pmf_agent.approval_cli apply prop-abc123 --store workspace   # records + verifies the mutation
+```
+
+The apply path exists **only** in this CLI/server layer — the agent's tool
+surface has no way to reach it, so prompt injection cannot cross the gate.
+
+### 5. Ask the agent a one-off question
+
+```bash
+python -c "
+from pmf_agent.adapter import FireworksAgentUnderTest
+from pmf_evals.scenarios import Scenario
+r = FireworksAgentUnderTest(entry_point='slack', skills_root='workspace').run(
+    Scenario(id='adhoc', entry_point='slack', category='q_and_a',
+             prompt='How did Google spend move last week vs the week before?'))
+print(r.text)"
+```
+
+## What's inside
+
+```
+├── evals/scenarios/golden.json  # 15 golden scenarios (data, not code)
+├── src/pmf_evals/               # eval harness: fixtures, runner, grader, flip report, CLI
+├── src/pmf_agent/               # agents: folded loop, hierarchical, routing, approval
+├── workspace/                   # skills/ + wiki/ (progressive disclosure) + proposals/
+└── results/                     # baselines + ab-report.md
+```
+
+- **Fixtures**: deterministic synthetic ad data (Google spikes, Meta dips,
+  Reddit flat), date-shifted so "last week" is always answerable; ground-truth
+  totals are shift-invariant.
+- **Grader**: exact figure checks (currency-tolerant, date-immune) + rubric
+  criteria + architecture-aware tool-routing expectations.
+- **Agents**: all built on deepagents 0.7.32; one model
+  (`accounts/fireworks/models/glm-5p3-flash` via Fireworks), no subagents by
+  default; hard rules and the write gate live in code, never in prompts.
+
+## Stage history (per PROPOSAL.md)
 
 | Stage | Status | Evidence |
 |---|---|---|
 | 0 Eval harness | done | 89 tests, 15 golden scenarios, flip report |
-| 1 Folded single loop | done | `results/fw-baseline.md` |
+| 1 Folded single loop | done | `results/fw-baseline.md` (14/15 baseline) |
 | 2 Intent routing (decision_harness) | done | degradation equality, zero flips |
 | 3 Skills + wiki | done | 15/15, q04 closed by the report skill |
 | 4 Approval workflow | done | fail-closed allowlist, verified apply |
-| 5 Architecture A/B | done | **`results/ab-report.md`: folded wins 15/15 vs 12/15 at 1.8x less latency** |
-
-Agents available to the eval CLI: `echo`, `fireworks` (folded),
-`fireworks-routed` (folded + Decisions tool routing), `fireworks-skills`
-(folded + skills/wiki), `fireworks-hierarchical` (parent + per-platform
-subagents).
+| 5 Architecture A/B | done | **folded wins 15/15 vs 12/15 at 1.8× less latency** |
