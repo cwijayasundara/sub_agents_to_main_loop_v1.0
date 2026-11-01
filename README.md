@@ -41,7 +41,7 @@ Copy `.env-template` to `.env` and fill in what you need:
 ### 2. Run the tests (no keys needed)
 
 ```bash
-pytest          # 89 tests, fully offline (fixtures + fake models)
+pytest          # 100 tests, fully offline (fixtures + fake models)
 ```
 
 ### 3. Run the eval suite
@@ -51,19 +51,27 @@ pytest          # 89 tests, fully offline (fixtures + fake models)
 python -m pmf_evals run --agent echo --out results/smoke.jsonl
 python -m pmf_evals grade --results results/smoke.jsonl
 
-# live runs (needs FIREWORKS_API_KEY): pick an architecture
-python -m pmf_evals run --agent fireworks             --out results/fw.jsonl            # folded single loop
-python -m pmf_evals run --agent fireworks-routed      --out results/fw-routed.jsonl     # + Decisions intent routing
-python -m pmf_evals run --agent fireworks-skills      --out results/fw-skills.jsonl     # + skills/wiki
-python -m pmf_evals run --agent fireworks-hierarchical --out results/fw-hier.jsonl      # parent + platform subagents
+# live runs (needs FIREWORKS_API_KEY): pick an architecture; --trace-dir
+# writes one human-readable transcript per scenario (every tool call + result)
+python -m pmf_evals run --agent fireworks               --out results/fw.jsonl        # folded single loop
+python -m pmf_evals run --agent fireworks-routed        --out results/fw-routed.jsonl # + Decisions intent routing
+python -m pmf_evals run --agent fireworks-skills        --out results/fw-skills.jsonl # + skills/wiki
+python -m pmf_evals run --agent fireworks-hierarchical  --out results/fw-hier.jsonl   # parent + platform subagents
+python -m pmf_evals run --agent fireworks-50            --out results/fw-50.jsonl     # 50-tool GTM-scale catalog
+python -m pmf_evals run --agent fireworks-skills        --trace-dir results/traces/folded
+python -m pmf_evals run --agent fireworks-hierarchical  --trace-dir results/traces/hier
 
-# grade + compare two architectures (the flip report)
-python -m pmf_evals grade --results results/fw-hier.jsonl --out results/fw-hier-graded.json
+# grade (use --arch hierarchical for subagent runs: task-delegation counts
+# as correct routing) + compare two architectures (the flip report)
+python -m pmf_evals grade --results results/fw-hier.jsonl --arch hierarchical --out results/fw-hier-graded.json
 python -m pmf_evals compare results/fw-skills.jsonl results/fw-hier.jsonl
 ```
 
 `compare` prints per-scenario verdicts, which tasks **flipped**, and
 latency/cost aggregates — any pass→fail flip blocks an architecture change.
+
+Example traces are committed under `results/traces/{folded,hier}/` — the same
+question answered by both architectures, side by side.
 
 ### 4. Run the approval workflow (analysis → action)
 
@@ -101,7 +109,6 @@ python -m pmf_agent --entry-point scheduled --no-stream "Produce the weekly repo
 
 Each turn prints the tools the agent called, the answer, and its
 token/cost footprint.
-```
 
 ## What's inside
 
@@ -110,7 +117,7 @@ token/cost footprint.
 ├── src/pmf_evals/               # eval harness: fixtures, runner, grader, flip report, CLI
 ├── src/pmf_agent/               # agents: folded loop, hierarchical, routing, approval
 ├── workspace/                   # skills/ + wiki/ (progressive disclosure) + proposals/
-└── results/                     # baselines + ab-report.md
+└── results/                     # baselines, traces/, ab-report.md, tools50-report.md
 ```
 
 - **Fixtures**: deterministic synthetic ad data (Google spikes, Meta dips,
@@ -126,7 +133,7 @@ token/cost footprint.
 
 | Stage | Status | Evidence |
 |---|---|---|
-| 0 Eval harness | done | 89 tests, 15 golden scenarios, flip report |
+| 0 Eval harness | done | 100 tests, 15 golden scenarios, flip report |
 | 1 Folded single loop | done | `results/fw-baseline.md` (14/15 baseline) |
 | 2 Intent routing (decision_harness) | done | degradation equality, zero flips |
 | 3 Skills + wiki | done | 15/15, q04 closed by the report skill |
