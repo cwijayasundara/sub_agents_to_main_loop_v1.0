@@ -80,3 +80,10 @@ def test_fireworks_hierarchical_registered_lazily():
     from pmf_evals.__main__ import _AGENTS
 
     assert "fireworks-hierarchical" in _AGENTS
+
+
+def test_50_tool_agents_registered():
+    from pmf_evals.__main__ import _AGENTS
+
+    assert "fireworks-50" in _AGENTS
+    assert "fireworks-50-routed" in _AGENTS

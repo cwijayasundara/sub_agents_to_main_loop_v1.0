@@ -19,12 +19,20 @@ from .runner import run_suite
 from .scenarios import GOLDEN_PATH, load_scenarios
 
 
-def _fireworks_agent(routed: bool = False, skills_root: str | None = None, arch: str = "folded"):
+def _fireworks_agent(
+    routed: bool = False, skills_root: str | None = None, arch: str = "folded",
+    tools_surface: str = "core", llm_selector: bool = False,
+):
     """Lazily import pmf_agent so the CLI loads without the agent stack."""
     from pmf_agent.adapter import FireworksAgentUnderTest
 
     return FireworksAgentUnderTest(
-        entry_point="slack", routed=routed, skills_root=skills_root, arch=arch
+        entry_point="slack",
+        routed=routed,
+        skills_root=skills_root,
+        arch=arch,
+        tools_surface=tools_surface,
+        llm_selector=llm_selector,
     )
 
 
@@ -34,6 +42,10 @@ _AGENTS = {
     "fireworks-routed": lambda: _fireworks_agent(routed=True),
     "fireworks-skills": lambda: _fireworks_agent(skills_root="workspace"),
     "fireworks-hierarchical": lambda: _fireworks_agent(skills_root="workspace", arch="hierarchical"),
+    "fireworks-50": lambda: _fireworks_agent(skills_root="workspace", tools_surface="full50"),
+    "fireworks-50-routed": lambda: _fireworks_agent(
+        skills_root="workspace", tools_surface="full50", llm_selector=True
+    ),
 }
 
 

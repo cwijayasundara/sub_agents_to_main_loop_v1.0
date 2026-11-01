@@ -34,19 +34,41 @@ type a question, or :quit / Ctrl-D to exit
 """
 
 
-def _build_agent(entry_point: str = "slack", arch: str = "folded", routed: bool = False, skills_root: str | None = "workspace", model=None):
-    """Build the deepagents graph for the selected architecture."""
+def _build_agent(
+    entry_point: str = "slack",
+    arch: str = "folded",
+    routed: bool = False,
+    skills_root: str | None = "workspace",
+    model=None,
+    tools_surface: str = "core",
+):
+    """Build the deepagents graph for the selected architecture.
+
+    tools_surface: "core" (4 tools) or "full50" (the 50-tool GTM-scale catalog).
+    """
+    tools_override = None
+    if tools_surface == "full50":
+        from .catalog50 import build_catalog_50
+
+        tools_override = build_catalog_50()
     if arch == "hierarchical":
         from .subagent_arch import create_hierarchical_agent
 
         return create_hierarchical_agent(entry_point, model=model, skills_root=skills_root)
     if routed:
+        from .agent import create_agent
         from .routing import tool_selection_middleware
 
-        return create_agent(entry_point, model=model, skills_root=skills_root, middleware=[tool_selection_middleware()])
+        return create_agent(
+            entry_point,
+            model=model,
+            skills_root=skills_root,
+            middleware=[tool_selection_middleware()],
+            tools_override=tools_override,
+        )
     from .agent import create_agent
 
-    return create_agent(entry_point, model=model, skills_root=skills_root)
+    return create_agent(entry_point, model=model, skills_root=skills_root, tools_override=tools_override)
 
 
 def _print_turn(text: str, tool_calls: list[str], usage: dict, cost: float) -> None:
@@ -63,12 +85,17 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--arch", choices=_ARCHS, default="folded")
     parser.add_argument("--routed", action="store_true", help="Decisions-backed tool routing")
     parser.add_argument("--skills-root", default="workspace")
+    parser.add_argument("--tools", dest="tools_surface", choices=["core", "full50"], default="core")
     parser.add_argument("--thread-id", default=None, help="conversation thread (interactive keeps one)")
     parser.add_argument("--no-stream", action="store_true", help="print only the final answer")
     args = parser.parse_args(argv)
 
     agent = _build_agent(
-        entry_point=args.entry_point, arch=args.arch, routed=args.routed, skills_root=args.skills_root
+        entry_point=args.entry_point,
+        arch=args.arch,
+        routed=args.routed,
+        skills_root=args.skills_root,
+        tools_surface=args.tools_surface,
     )
     thread = {"configurable": {"thread_id": args.thread_id or f"cli-{uuid.uuid4().hex[:8]}"}}
 

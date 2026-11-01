@@ -20,6 +20,14 @@ from .agent import ENTRY_POINTS, create_agent
 from .fw import estimate_cost_usd
 
 
+def _full50_if_requested(surface: str):
+    if surface == "full50":
+        from .catalog50 import build_catalog_50
+
+        return build_catalog_50()
+    return None
+
+
 def extract_text(messages: list) -> str:
     """Text of the last AI message."""
     for m in reversed(messages):
@@ -62,6 +70,8 @@ class FireworksAgentUnderTest:
         routed: bool = False,
         skills_root: str | None = None,
         arch: str = "folded",
+        tools_surface: str = "core",
+        llm_selector: bool = False,
     ) -> None:
         if entry_point not in ENTRY_POINTS:
             raise ValueError(f"entry_point must be one of {ENTRY_POINTS}, got {entry_point!r}")
@@ -72,10 +82,26 @@ class FireworksAgentUnderTest:
         self.routed = routed
         self._skills_root = skills_root
         self.arch = arch
+        self.tools_surface = tools_surface
+        self.llm_selector = llm_selector
         self._middleware = None
         self._graph = None
 
     def _build(self):
+        tools_override = _full50_if_requested(self.tools_surface)
+        if self.llm_selector:
+            from langchain.agents.middleware import LLMToolSelectorMiddleware
+
+            self._middleware = LLMToolSelectorMiddleware(
+                always_include=["propose_campaign_change"], max_tools=12
+            )
+            return create_agent(
+                self.entry_point,
+                model=self._model,
+                middleware=[self._middleware],
+                skills_root=self._skills_root,
+                tools_override=tools_override,
+            )
         if self.arch == "hierarchical":
             from .subagent_arch import create_hierarchical_agent
 
@@ -91,8 +117,14 @@ class FireworksAgentUnderTest:
                 model=self._model,
                 middleware=[self._middleware],
                 skills_root=self._skills_root,
+                tools_override=tools_override,
             )
-        return create_agent(self.entry_point, model=self._model, skills_root=self._skills_root)
+        return create_agent(
+            self.entry_point,
+            model=self._model,
+            skills_root=self._skills_root,
+            tools_override=tools_override,
+        )
 
     @property
     def graph(self):

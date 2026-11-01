@@ -13,7 +13,11 @@ def profile_tools(entry_point: str) -> list:
 
 
 def create_agent(
-    entry_point: str, model=None, middleware=None, skills_root: str | None = None
+    entry_point: str,
+    model=None,
+    middleware=None,
+    skills_root: str | None = None,
+    tools_override=None,
 ):
     """One model, one loop, no subagents; the entry point only changes capabilities.
 
@@ -22,12 +26,13 @@ def create_agent(
     directory containing `skills/` (progressively disclosed SKILL.md libraries)
     and `wiki/` (company reference pages); skills are then disclosed by name
     and read on demand through the filesystem backend.
+    `tools_override` replaces the profile tool set (e.g. the 50-tool catalog).
     """
     if entry_point not in ENTRY_POINTS:
         raise ValueError(f"entry_point must be one of {ENTRY_POINTS}, got {entry_point!r}")
     from deepagents import create_deep_agent
 
-    tools = profile_tools(entry_point)
+    tools = list(tools_override) if tools_override is not None else profile_tools(entry_point)
     kwargs: dict = {}
     if skills_root is not None:
         from deepagents.backends import FilesystemBackend

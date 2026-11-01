@@ -76,3 +76,17 @@ def test_build_agent_uses_flags():
     assert set(agent2.pmf_subagents) == {
         "google-ads-specialist", "meta-ads-specialist", "reddit-ads-specialist"
     }
+
+
+def test_build_agent_full50_surface():
+    from conftest import make_fake_model
+    from pmf_agent.catalog50 import build_catalog_50
+    from pmf_agent import main as m
+
+    agent = m._build_agent(
+        entry_point="slack", arch="folded", tools_surface="full50", model=make_fake_model()
+    )
+    assert {t.name for t in agent.pmf_tools} == {t.name for t in build_catalog_50()}
+    # core surface unchanged
+    agent2 = m._build_agent(entry_point="slack", arch="folded", model=make_fake_model())
+    assert len(agent2.pmf_tools) == 4
