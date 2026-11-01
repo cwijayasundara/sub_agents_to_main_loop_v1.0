@@ -42,3 +42,25 @@ python -m pmf_evals grade --results results/fw.jsonl
 
 Re-run after each architecture change; any pass→fail flip blocks the change
 (Anthropic doctrine: watch which tasks flip, not just aggregate scores).
+
+## Stage 2 addendum — intent-routed tool surface (fireworks-routed)
+
+Run: `fw-routed.jsonl` / `fw-routed-graded.json` / `fw-degradation-compare.json`
+
+| Metric | Stage 1 (unrouted) | Stage 2 (routed) |
+|---|---|---|
+| Scenarios passing | 14/15 | 14/15 |
+| Flipped tasks | — | **none** (degradation equality ✅) |
+| Selection observability | — | recorded per turn |
+
+- No `DECISIONS_API_KEY` in env → every selection degraded exactly as designed:
+  `unavailable -> keep all tools`, zero crashes, verdicts identical to Stage 1.
+  When a key is provided, the same rows will carry real per-intent selections.
+- **Eval finding (q12):** first routed run flipped q12 — the model checked Meta's
+  data, found the CPA premise false, and *refused to propose* a change. Scenario
+  `expected_tools` had demanded a proposal unconditionally; corrected to require
+  the data check (proposal conditional on the data). This is the flip report
+  catching eval design error, exactly its job.
+- With the catalog at 4 tools, routing saves little; the plumbing is the point —
+  it scales unchanged to the 200+-tool Pipeboard catalog (Anthropic's 30–50 tool
+  ceiling is where intent routing starts to pay for itself).
