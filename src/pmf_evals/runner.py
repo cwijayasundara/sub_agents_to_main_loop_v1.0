@@ -27,6 +27,7 @@ class RunResult:
         tokens_out: int = 0,
         cost_usd: float = 0.0,
         latency_ms: int = 0,
+        selections: list[dict] | None = None,
     ) -> None:
         self.text = text
         self.tool_calls = list(tool_calls)
@@ -34,6 +35,7 @@ class RunResult:
         self.tokens_out = tokens_out
         self.cost_usd = cost_usd
         self.latency_ms = latency_ms
+        self.selections = selections
 
 
 @runtime_checkable
@@ -79,6 +81,7 @@ def run_suite(
                     tokens_out=0,
                     cost_usd=0.0,
                     latency_ms=int((time.perf_counter() - started) * 1000),
+                    selections=None,
                     error=f"{type(e).__name__}: {e}",
                 )
             fh.write(json.dumps(row) + "\n")

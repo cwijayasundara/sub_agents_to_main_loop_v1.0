@@ -5,6 +5,9 @@ from pmf_evals.scenarios import Scenario
 from pmf_agent.adapter import FireworksAgentUnderTest, extract_text, extract_tool_calls, extract_usage
 
 
+from conftest import make_fake_model as _fake_model
+
+
 def _msgs():
     return [
         HumanMessage("how did google spend move?"),
@@ -69,3 +72,32 @@ def test_entry_point_validated():
 
     with pytest.raises(ValueError, match="entry_point"):
         FireworksAgentUnderTest(entry_point="email", model="stub")
+
+
+class _FakeRoutingClient:
+    zero_data_retention = True
+
+    def post(self, payload):
+        return {"answers": [{"probability": 1.0}]}
+
+    def _parse_tools(self, data, tool_names):
+        return {name: 1.0 for name in tool_names}
+
+
+def test_routed_adapter_surfaces_selections():
+    from pmf_agent.adapter import FireworksAgentUnderTest as A
+
+    scenario = Scenario(id="q01_x", entry_point="slack", category="q_and_a", prompt="how did google spend move?")
+    adapter = A(entry_point="slack", model=_fake_model(), routed=True)
+    result = adapter.run(scenario)
+    assert result.selections is not None
+    assert len(result.selections) >= 1
+    first = result.selections[0]
+    assert "google" in first["task"]
+    assert isinstance(first["selected"], list)
+
+
+def test_unrouted_adapter_has_no_selections():
+    scenario = Scenario(id="q01_x", entry_point="slack", category="q_and_a", prompt="p")
+    adapter = FireworksAgentUnderTest(entry_point="slack", model=_fake_model())
+    assert adapter.run(scenario).selections is None

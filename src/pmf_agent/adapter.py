@@ -3,6 +3,10 @@
 `FireworksAgentUnderTest` implements the harness's `AgentUnderTest` protocol so
 the folded single loop runs in the same suite as any other candidate
 architecture (Stage 5's parent+subagents variant plugs in identically).
+
+With `routed=True`, a decision_harness ToolSelectionMiddleware filters the tool
+surface per intent and the per-turn selections are surfaced on the RunResult
+for routing-accuracy measurement.
 """
 
 from __future__ import annotations
@@ -47,14 +51,21 @@ def extract_usage(messages: list) -> dict[str, int]:
 class FireworksAgentUnderTest:
     """AgentUnderTest implementation backed by the folded single loop."""
 
-    def __init__(self, entry_point: str = "slack", model=None) -> None:
+    def __init__(self, entry_point: str = "slack", model=None, routed: bool = False) -> None:
         if entry_point not in ENTRY_POINTS:
             raise ValueError(f"entry_point must be one of {ENTRY_POINTS}, got {entry_point!r}")
         self.entry_point = entry_point
         self._model = model
+        self.routed = routed
+        self._middleware = None
         self._graph = None
 
     def _build(self):
+        if self.routed:
+            from .routing import tool_selection_middleware
+
+            self._middleware = tool_selection_middleware()
+            return create_agent(self.entry_point, model=self._model, middleware=[self._middleware])
         return create_agent(self.entry_point, model=self._model)
 
     @property
@@ -62,6 +73,14 @@ class FireworksAgentUnderTest:
         if self._graph is None:
             self._graph = self._build()
         return self._graph
+
+    def _selections(self) -> list[dict] | None:
+        if not self.routed or self._middleware is None:
+            return None
+        return [
+            {"task": task, "selected": list(sel.selected), "events": list(sel.events)}
+            for task, sel in self._middleware.selector.events
+        ]
 
     def run(self, scenario: Scenario) -> RunResult:
         started = time.perf_counter()
@@ -79,4 +98,5 @@ class FireworksAgentUnderTest:
             tokens_out=usage["output_tokens"],
             cost_usd=estimate_cost_usd(usage["input_tokens"], usage["output_tokens"]),
             latency_ms=latency_ms,
+            selections=self._selections(),
         )

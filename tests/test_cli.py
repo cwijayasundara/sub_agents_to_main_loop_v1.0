@@ -62,3 +62,9 @@ def test_fireworks_agent_registered_lazily():
         capture_output=True, text=True, check=True,
     )
     assert out.stdout.strip() == "False"
+
+
+def test_fireworks_routed_registered_lazily():
+    from pmf_evals.__main__ import _AGENTS
+
+    assert "fireworks-routed" in _AGENTS
