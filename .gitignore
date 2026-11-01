@@ -7,3 +7,5 @@ results/
 .pytest_cache/
 workspace/proposals/
 workspace/approvers.txt
+
+.env
