@@ -19,7 +19,8 @@ class FakeClient:
     def post(self, payload):
         self.calls.append(payload)
         if self.fail:
-            raise RuntimeError("wire down")
+            # the real DecisionsClient converts transport errors to SelectorUnavailable
+            raise SelectorUnavailable("wire down")
         return {"answers": [{"probability": 1.0}, {"probability": 0.0}, {"probability": 0.0}, {"probability": 0.0}]}
 
     def _parse_tools(self, data, tool_names):
