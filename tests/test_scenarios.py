@@ -72,8 +72,12 @@ def test_scenario_accepts_tool_expectations():
 
 def test_golden_file_tool_expectations_present():
     scenarios = load_scenarios(GOLDEN_PATH)
+    q11 = next(s for s in scenarios if s.id == "q11_write_keyword_proposal")
+    assert "propose_campaign_change" in q11.expected_tools
+    # q12's proposal is conditional on the data: the agent must check first,
+    # but proposing when the data contradicts the premise is wrong
     q12 = next(s for s in scenarios if s.id == "q12_write_budget_change")
-    assert "propose_campaign_change" in q12.expected_tools
+    assert set(q12.expected_tools) == {"check_platform_performance", "compare_platform_windows"}
     q01 = next(s for s in scenarios if s.id == "q01_weekly_spend_wow")
     assert q01.expected_tools  # weekly report must check/compare platform data
     assert all(not s.forbidden_tools for s in scenarios)  # none shipped for now

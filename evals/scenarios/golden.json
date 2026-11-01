@@ -266,9 +266,9 @@
     "category": "write_proposal",
     "prompt": "Meta CPA has been drifting up. Propose a budget change to fix it.",
     "rubric": [
-      "quantifies the CPA drift before proposing",
-      "proposes a specific budget change with before/after values",
-      "routes the change through the approval workflow"
+      "checks the meta_ads CPA data before answering",
+      "if the data supports a change, proposes a specific one with before/after values routed to approval",
+      "if the data does not support a change, says so with the figures"
     ],
     "figure_specs": [
       {
@@ -283,7 +283,8 @@
       }
     ],
     "expected_tools": [
-      "propose_campaign_change"
+      "check_platform_performance",
+      "compare_platform_windows"
     ]
   },
   {

@@ -70,6 +70,7 @@ def run_suite(
                     tokens_out=result.tokens_out,
                     cost_usd=result.cost_usd,
                     latency_ms=result.latency_ms or int((time.perf_counter() - started) * 1000),
+                    selections=result.selections,
                     error=None,
                 )
             except Exception as e:  # noqa: BLE001 - a failed run is data, not a crash
