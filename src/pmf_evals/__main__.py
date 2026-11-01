@@ -93,6 +93,12 @@ def _cmd_report(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_serve(args: argparse.Namespace) -> int:
+    from pmf_agent.server import main as serve_main
+
+    return serve_main([f"--port", str(args.port)] + (["--offline"] if args.offline else []) + (["--open"] if args.open else []))
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="pmf_evals")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -117,6 +123,12 @@ def main(argv: list[str] | None = None) -> int:
     p_cmp.set_defaults(func=_cmd_compare)
 
     sub.add_parser("report", help="build + open the architecture comparison page").set_defaults(func=_cmd_report)
+
+    p_serve = sub.add_parser("serve", help="run the live comparison server")
+    p_serve.add_argument("--port", type=int, default=8765)
+    p_serve.add_argument("--offline", action="store_true", help="EchoAgent instead of live LLM runs")
+    p_serve.add_argument("--open", action="store_true", help="open the browser on start")
+    p_serve.set_defaults(func=_cmd_serve)
 
     args = parser.parse_args(argv)
     return args.func(args)

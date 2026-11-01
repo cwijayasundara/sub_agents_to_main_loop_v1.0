@@ -110,6 +110,42 @@ python -m pmf_agent --entry-point scheduled --no-stream "Produce the weekly repo
 Each turn prints the tools the agent called, the answer, and its
 token/cost footprint.
 
+### 6. Watch it run live: the comparison server
+
+A stdlib HTTP server (no extra dependencies) with an embedded live dashboard:
+launch either architecture over the golden set and watch scenarios execute
+one by one — progress bar, per-scenario verdicts/latency, click-through
+turn-by-turn transcripts, live flip report, and an approval panel wired to
+the real permission-checked store.
+
+```bash
+python -m pmf_evals serve                 # live LLM runs (needs FIREWORKS_API_KEY)
+python -m pmf_evals serve --offline       # EchoAgent demo of the UI, no keys
+python -m pmf_evals serve --port 9000 --open
+```
+
+Then open http://127.0.0.1:8765:
+
+- **Run folded loop / Run hierarchical / Run 50-tool loop** — each starts a
+  background job over the 15 scenarios; progress updates every second.
+- **Scenario table** — status pills, verdicts, latency, tokens; click a row
+  to read its full transcript (every tool call with args and every result).
+- **Flip report** — computed live once both `folded` and `hierarchical` have run.
+- **Proposals** — approve (permission-checked: try approver `U999` to see the
+  refusal) and apply with verification, straight from the browser.
+
+### 7. The static comparison page (popup on test runs)
+
+A single self-contained HTML file with the two architecture diagrams and the
+measured numbers, Anthropic-diagram style:
+
+```bash
+python -m pmf_evals report     # regenerate + open results/comparison.html
+```
+
+A plain `pytest` run also pops this page at the end (a deliberately-last test
+does it); suppress with `PMF_NO_BROWSER=1`.
+
 ## What's inside
 
 ```

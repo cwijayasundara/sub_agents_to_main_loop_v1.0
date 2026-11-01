@@ -21,11 +21,19 @@ class EchoAgent:
             parts.append(f"{spec.platform} {spec.window} {metric} = {value:,.2f}")
         # keep a date in the text on purpose: graders must never match it
         parts.append(f"as of {shifted['google_ads'][-1]['date']}")
+        # behave like a well-routed agent: call what the scenario expects
+        tool_calls = [scenario.expected_tools[0]] if scenario.expected_tools else ["echo"]
         return RunResult(
             text="; ".join(parts),
-            tool_calls=["echo"],
+            tool_calls=tool_calls,
             tokens_in=len(scenario.prompt) // 4,
             tokens_out=50,
             cost_usd=0.0001,
             latency_ms=10,
+            trace=[
+                {"role": "human", "content": scenario.prompt},
+                {"role": "ai", "content": "; ".join(parts), "tool_calls": [
+                    {"name": name, "args": {}} for name in tool_calls
+                ]},
+            ],
         )
