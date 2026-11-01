@@ -64,3 +64,27 @@ Run: `fw-routed.jsonl` / `fw-routed-graded.json` / `fw-degradation-compare.json`
 - With the catalog at 4 tools, routing saves little; the plumbing is the point —
   it scales unchanged to the 200+-tool Pipeboard catalog (Anthropic's 30–50 tool
   ceiling is where intent routing starts to pay for itself).
+
+## Stage 3 addendum — skills + wiki (fireworks-skills)
+
+Run: `fw-skills.jsonl` / `fw-skills-graded.json` / `fw-skills-compare.json`
+
+| Metric | Stage 1 | Stage 3 (skills) |
+|---|---|---|
+| Scenarios passing | 14/15 | **15/15** |
+| Mean latency | 9.6 s | 17.5 s |
+| Mean cost (placeholder) | $0.0016 | $0.0035 |
+
+- **q04 closed by the report skill**: flip report shows exactly one flip,
+  `q04 fail->figures_only`; the Google row now quotes both absolute windows
+  ("$5,377.43 → $8,029.35 (+49.3%)") — the agent read the skill via
+  progressive disclosure (tool trace shows read_file + glob + ls).
+- **Zero regressions** on the other 14 scenarios.
+- Cost/latency ~2x: skill reading adds turns. This is the trade the eval
+  harness exists to measure — Stage 2's intent routing and model tiering are
+  the levers to pull it back if needed (per Anthropic: cost-optimize one
+  change at a time, keep what holds up).
+- Workspace layout: `workspace/skills/` (3 portable skills) +
+  `workspace/wiki/` (source-of-truth, campaign-goals) served through the
+  deepagents filesystem backend with skills listed in the system prompt only
+  by name+description until read.
