@@ -85,16 +85,22 @@ python -m pmf_agent.approval_cli apply prop-abc123 --store workspace   # records
 The apply path exists **only** in this CLI/server layer — the agent's tool
 surface has no way to reach it, so prompt injection cannot cross the gate.
 
-### 5. Ask the agent a one-off question
+### 5. Chat with the agent directly
 
 ```bash
-python -c "
-from pmf_agent.adapter import FireworksAgentUnderTest
-from pmf_evals.scenarios import Scenario
-r = FireworksAgentUnderTest(entry_point='slack', skills_root='workspace').run(
-    Scenario(id='adhoc', entry_point='slack', category='q_and_a',
-             prompt='How did Google spend move last week vs the week before?'))
-print(r.text)"
+# one-off question (live LLM)
+python -m pmf_agent "How did Google spend move last week vs the week before?"
+
+# interactive multi-turn session (one thread; :quit or Ctrl-D to exit)
+python -m pmf_agent
+
+# architecture / profile flags
+python -m pmf_agent --arch hierarchical "Which platform gained spend share?"
+python -m pmf_agent --entry-point scheduled --no-stream "Produce the weekly report"
+```
+
+Each turn prints the tools the agent called, the answer, and its
+token/cost footprint.
 ```
 
 ## What's inside
