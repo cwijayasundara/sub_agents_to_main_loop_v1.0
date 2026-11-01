@@ -116,3 +116,21 @@ def test_no_tool_expectations_leaves_verdict_unchanged():
     s = _scenario()  # no expected/forbidden
     report = grade_result(_row(), [s])
     assert "tools" not in report or report["tools"] is None
+
+
+def test_hierarchical_delegation_counts_as_routing():
+    # in the hierarchical arch, task -> platform specialist IS correct routing
+    s = _scenario(figure_specs=(), expected_tools=["check_platform_performance"], forbidden_tools=[])
+    row = _row("delegated", **{"tool_calls": ["list_platforms", "task"]})
+    folded = grade_result(row, [s], arch="folded")
+    hier = grade_result(row, [s], arch="hierarchical")
+    assert folded["tools"]["expected_found"] is False
+    assert hier["tools"]["expected_found"] is True
+    assert hier["verdict"] != "fail"
+
+
+def test_forbidden_tools_still_apply_when_delegating():
+    s = _scenario(expected_tools=[], forbidden_tools=["propose_campaign_change"])
+    row = _row("delegated with a write", **{"tool_calls": ["task", "propose_campaign_change"]})
+    report = grade_result(row, [s], arch="hierarchical")
+    assert report["verdict"] == "fail"

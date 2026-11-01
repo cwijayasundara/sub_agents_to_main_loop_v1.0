@@ -44,11 +44,18 @@ python -m pmf_evals compare results/a.jsonl results/b.jsonl
 
 Set `PMF_FIXTURE_ANCHOR=YYYY-MM-DD` to pin the replay date.
 
-## Stages ahead (per PROPOSAL.md)
+## Stages (per PROPOSAL.md) — all complete
 
-1. Single loop + capability profiles (no subagents) — baseline fold
-2. Intent-routed tool surface via decision_harness middlewares
-3. Skills/wiki lifted from the PMA
-4. Approval-gated writes (code-enforced gates)
-5. A/B: folded loop vs parent+per-platform-subagents; keep subagents only
-   where the folded version scores worse
+| Stage | Status | Evidence |
+|---|---|---|
+| 0 Eval harness | done | 89 tests, 15 golden scenarios, flip report |
+| 1 Folded single loop | done | `results/fw-baseline.md` |
+| 2 Intent routing (decision_harness) | done | degradation equality, zero flips |
+| 3 Skills + wiki | done | 15/15, q04 closed by the report skill |
+| 4 Approval workflow | done | fail-closed allowlist, verified apply |
+| 5 Architecture A/B | done | **`results/ab-report.md`: folded wins 15/15 vs 12/15 at 1.8x less latency** |
+
+Agents available to the eval CLI: `echo`, `fireworks` (folded),
+`fireworks-routed` (folded + Decisions tool routing), `fireworks-skills`
+(folded + skills/wiki), `fireworks-hierarchical` (parent + per-platform
+subagents).

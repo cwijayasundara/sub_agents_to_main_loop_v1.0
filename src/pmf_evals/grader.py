@@ -34,10 +34,14 @@ def _matches(expected: float, found: list[float]) -> bool:
     return any(abs(v - expected) <= tolerance for v in found)
 
 
-def grade_result(row: dict, scenarios: list[Scenario], judge: Callable[[str, dict], bool] | None = None) -> dict:
+def grade_result(row: dict, scenarios: list[Scenario], judge: Callable[[str, dict], bool] | None = None, arch: str = "folded") -> dict:
     """Grade one runner row against its scenario.
 
     judge: optional callable(criterion, row) -> bool, applied per rubric criterion.
+    arch: "folded" (default) or "hierarchical" — routing expectations are
+    architecture-aware: in the hierarchical arch, delegating via `task` to a
+    platform specialist IS the correct routing for any read intent, because
+    platform read tools live inside the subagents, not the parent.
     """
     scenario = next((s for s in scenarios if s.id == row["scenario_id"]), None)
     if scenario is None:
@@ -90,9 +94,13 @@ def grade_result(row: dict, scenarios: list[Scenario], judge: Callable[[str, dic
 
     # routing accuracy: did the agent call the right tool for the intent?
     tool_calls = row.get("tool_calls", [])
+    delegated = arch == "hierarchical" and "task" in tool_calls
     tools: dict | None = None
     if scenario.expected_tools or scenario.forbidden_tools:
-        expected_found = any(t in tool_calls for t in scenario.expected_tools)
+        expected_found = (
+            delegated
+            or any(t in tool_calls for t in scenario.expected_tools)
+        )
         forbidden_violations = [t for t in scenario.forbidden_tools if t in tool_calls]
         tools = {
             "expected_found": expected_found,
