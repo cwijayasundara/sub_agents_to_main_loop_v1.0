@@ -1,0 +1,64 @@
+scenario: q08_slack_reddit_conversions (q_and_a, slack)
+prompt:   How many conversions did Reddit drive last week?
+anchor:   2026-10-30  latency: 3778ms  tokens: 12307/268  cost: $0.0014
+======================================================================
+[human]
+How many conversions did Reddit drive last week?
+
+[ai]
+  -> tool: read_file({"file_path": "/skills/paid-media-analysis/SKILL.md", "limit": 1000})
+
+[tool]
+@@ lines 1-36 of 36 @@
+---
+name: paid-media-analysis
+description: How to investigate paid media performance across platforms - which tools to call, how to compare windows, and how to state figures so they can be verified.
+---
+
+# Paid Media Analysis
+
+## Workflow
+
+1. Call `list_platforms` first if you are unsure what platforms, metrics, or
+   windows exist.
+2. For a single platform question, call `check_platform_performance`.
+3. For any "did it get better or worse" question, call
+   `compare_platform_windows` - never compute week-over-week changes in your
+   head from two separate checks.
+4. For cross-platform questions, check every platform, then compare shares.
+
+## How to state figures
+
+- Quote the **absolute values for both windows**, not just the recent value
+  with a percentage. "Spend moved from $5,377.43 to $8,029.35 (+49.3%)" is
+  correct; "spend is up 49%" alone is not.
+- Name the metric, platform, window dates, and source with every figure.
+- Never mix metrics across sources: media metrics (spend, impressions, clicks,
+  conversions) come from the ad platforms. Pipeline outcomes come from the
+  warehouse (see the wiki's source-of-truth page).
+- If the data window is incomplete, say so explicitly and give the last
+  complete date.
+
+## Judgment
+
+- Small conversion volumes make percentage changes noisy - flag wide
+  uncertainty instead of over-reading a move.
+- Do not recommend cutting the top spend driver off one bad week.
+- A performance change without a plausible driver is a question to
+  investigate, not a fact to report.
+
+[ai]
+  -> tool: check_platform_performance({"platform": "reddit_ads", "window": "last_week"})
+
+[tool]
+{"platform": "reddit_ads", "window": "last_week", "window_start": "2026-10-24", "window_end": "2026-10-30", "totals": {"spend": 775.25, "conversions": 7, "cpa": 110.75}, "source": "ad platform (fixture)", "data_complete_through": "2026-10-30"}
+
+[ai]
+**Reddit drove 7 conversions last week** (Oct 24–30, 2026, per the Reddit Ads platform; data complete through Oct 30).
+
+Context on that result:
+- Spend: $775.25
+- Conversions: 7
+- CPA: $110.75
+
+Worth noting: 7 conversions in a week is a small volume, so any week-over-week read on Reddit will be noisy. Want me to compare it against the prior week?

@@ -1,0 +1,66 @@
+scenario: q09_slack_trend_30d (q_and_a, slack)
+prompt:   Roughly how has Google spend trended over the last 30 days?
+anchor:   2026-10-30  latency: 5487ms  tokens: 12441/579  cost: $0.0015
+======================================================================
+[human]
+Roughly how has Google spend trended over the last 30 days?
+
+[ai]
+  -> tool: read_file({"file_path": "/skills/paid-media-analysis/SKILL.md", "limit": 1000})
+
+[tool]
+@@ lines 1-36 of 36 @@
+---
+name: paid-media-analysis
+description: How to investigate paid media performance across platforms - which tools to call, how to compare windows, and how to state figures so they can be verified.
+---
+
+# Paid Media Analysis
+
+## Workflow
+
+1. Call `list_platforms` first if you are unsure what platforms, metrics, or
+   windows exist.
+2. For a single platform question, call `check_platform_performance`.
+3. For any "did it get better or worse" question, call
+   `compare_platform_windows` - never compute week-over-week changes in your
+   head from two separate checks.
+4. For cross-platform questions, check every platform, then compare shares.
+
+## How to state figures
+
+- Quote the **absolute values for both windows**, not just the recent value
+  with a percentage. "Spend moved from $5,377.43 to $8,029.35 (+49.3%)" is
+  correct; "spend is up 49%" alone is not.
+- Name the metric, platform, window dates, and source with every figure.
+- Never mix metrics across sources: media metrics (spend, impressions, clicks,
+  conversions) come from the ad platforms. Pipeline outcomes come from the
+  warehouse (see the wiki's source-of-truth page).
+- If the data window is incomplete, say so explicitly and give the last
+  complete date.
+
+## Judgment
+
+- Small conversion volumes make percentage changes noisy - flag wide
+  uncertainty instead of over-reading a move.
+- Do not recommend cutting the top spend driver off one bad week.
+- A performance change without a plausible driver is a question to
+  investigate, not a fact to report.
+
+[ai]
+  -> tool: check_platform_performance({"platform": "google_ads", "window": "last_30d"})
+  -> tool: compare_platform_windows({"metric": "spend", "platform": "google_ads", "window_a": "last_week", "window_b": "prior_week"})
+
+[tool]
+{"platform": "google_ads", "window": "last_30d", "window_start": "2026-10-01", "window_end": "2026-10-30", "totals": {"spend": 25421.9, "conversions": 131, "cpa": 194.06}, "source": "ad platform (fixture)", "data_complete_through": "2026-10-30"}
+
+[tool]
+{"platform": "google_ads", "metric": "spend", "window_a": "last_week", "window_a_total": 8029.35, "window_b": "prior_week", "window_b_total": 5377.43, "direction": "up", "pct_change": 49.3}
+
+[ai]
+Google Ads spend is trending **up**, with a sharp acceleration in the most recent week.
+
+- **Last 30 days (2026-10-01 → 2026-10-30, source: Google Ads):** spend $25,421.90, 131 conversions, CPA $194.06. Data is complete through 2026-10-30.
+- **Week over week (Google Ads):** spend rose from $5,377.43 (prior week) to $8,029.35 (last week), **+49.3%** — so the last week alone ran ~$8.0K, roughly a third of the 30-day total.
+
+In short: roughly ~$25K over the month, climbing steeply toward the end. Caveat: this characterizes spend only — the CPA impact of that ramp isn't clear from a spend comparison alone, so it's worth checking whether conversions kept pace before reading it as good or bad.

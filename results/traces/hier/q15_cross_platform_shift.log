@@ -1,0 +1,169 @@
+scenario: q15_cross_platform_shift (cross_platform, slack)
+prompt:   Did the mix of spend across platforms shift last week? Which platform gained share?
+anchor:   2026-10-30  latency: 27602ms  tokens: 17077/2786  cost: $0.0031
+======================================================================
+[human]
+Did the mix of spend across platforms shift last week? Which platform gained share?
+
+[ai]
+  -> tool: read_file({"file_path": "/skills/paid-media-analysis/SKILL.md", "limit": 1000})
+
+[tool]
+@@ lines 1-36 of 36 @@
+---
+name: paid-media-analysis
+description: How to investigate paid media performance across platforms - which tools to call, how to compare windows, and how to state figures so they can be verified.
+---
+
+# Paid Media Analysis
+
+## Workflow
+
+1. Call `list_platforms` first if you are unsure what platforms, metrics, or
+   windows exist.
+2. For a single platform question, call `check_platform_performance`.
+3. For any "did it get better or worse" question, call
+   `compare_platform_windows` - never compute week-over-week changes in your
+   head from two separate checks.
+4. For cross-platform questions, check every platform, then compare shares.
+
+## How to state figures
+
+- Quote the **absolute values for both windows**, not just the recent value
+  with a percentage. "Spend moved from $5,377.43 to $8,029.35 (+49.3%)" is
+  correct; "spend is up 49%" alone is not.
+- Name the metric, platform, window dates, and source with every figure.
+- Never mix metrics across sources: media metrics (spend, impressions, clicks,
+  conversions) come from the ad platforms. Pipeline outcomes come from the
+  warehouse (see the wiki's source-of-truth page).
+- If the data window is incomplete, say so explicitly and give the last
+  complete date.
+
+## Judgment
+
+- Small conversion volumes make percentage changes noisy - flag wide
+  uncertainty instead of over-reading a move.
+- Do not recommend cutting the top spend driver off one bad week.
+- A performance change without a plausible driver is a question to
+  investigate, not a fact to report.
+
+[ai]
+  -> tool: list_platforms({})
+
+[tool]
+{"platforms": ["google_ads", "meta_ads", "reddit_ads"], "metrics": ["spend", "conversions", "cpa"], "anchor": "2026-10-30", "windows": ["last_30d", "last_week", "prior_week"]}
+
+[ai]
+The skill workflow says to use window comparisons from each platform's data rather than computing from separate checks. I don't have platform data tools directly, so I'll delegate to the three platform specialists in parallel, each pulling spend for the last two weekly windows.
+  -> tool: task({"description": "Pull spend data for google_ads for two weekly windows: \"last_week\" and \"prior_week\" (data anchor is 2026-10-30). Use the platform performance checking tools available to you (e.g., check_platform_performance / compare_platform_windows with the window parameters last_week and prior_week). Report back: (1) absolute spend for google_ads in last_week with exact window dates, (2) absolute spend for google_ads in prior_week with exact window dates, (3) the platform-computed week-over-week change in spend and share of spend if available, (4) the data source used, and (5) whether either window is incomplete (e.g., partial days) \u2014 if so, state the last complete date. This is a read-only analysis task; do not propose or make any changes. Return figures verbatim with two decimals as reported by the tool.", "subagent_type": "google-ads-specialist"})
+  -> tool: task({"description": "Pull spend data for meta_ads for two weekly windows: \"last_week\" and \"prior_week\" (data anchor is 2026-10-30). Use the platform performance checking tools available to you (e.g., check_platform_performance / compare_platform_windows with the window parameters last_week and prior_week). Report back: (1) absolute spend for meta_ads in last_week with exact window dates, (2) absolute spend for meta_ads in prior_week with exact window dates, (3) the platform-computed week-over-week change in spend and share of spend if available, (4) the data source used, and (5) whether either window is incomplete (e.g., partial days) \u2014 if so, state the last complete date. This is a read-only analysis task; do not propose or make any changes. Return figures verbatim with two decimals as reported by the tool.", "subagent_type": "meta-ads-specialist"})
+  -> tool: task({"description": "Pull spend data for reddit_ads for two weekly windows: \"last_week\" and \"prior_week\" (data anchor is 2026-10-30). Use the platform performance checking tools available to you (e.g., check_platform_performance / compare_platform_windows with the window parameters last_week and prior_week). Report back: (1) absolute spend for reddit_ads in last_week with exact window dates, (2) absolute spend for reddit_ads in prior_week with exact window dates, (3) the platform-computed week-over-week change in spend and share of spend if available, (4) the data source used, and (5) whether either window is incomplete (e.g., partial days) \u2014 if so, state the last complete date. This is a read-only analysis task; do not propose or make any changes. Return figures verbatim with two decimals as reported by the tool.", "subagent_type": "reddit-ads-specialist"})
+
+[tool]
+All data retrieved. Here is the read-only synthesis for **google_ads** (data anchor 2026-10-30).
+
+## google_ads — Weekly Spend Comparison
+
+**(1) Last week — absolute spend**
+- Spend: **$8,029.35**
+- Window: **2026-10-24 → 2026-10-30** (7 days)
+- Context (same window): 42 conversions, CPA $191.18
+
+**(2) Prior week — absolute spend**
+- Spend: **$5,377.43**
+- Window: **2026-10-17 → 2026-10-23** (7 days)
+- Context (same window): 28 conversions, CPA $192.05
+
+**(3) Platform-computed week-over-week change**
+- `compare_windows(metric=spend)` returned: direction **"up"** (window_a_total 8,029.35 vs window_b_total 5,377.43).
+- The tool reports the direction only; it does **not** emit a numeric percentage or absolute delta, so per the analysis skill I'm not presenting a hand-computed rate as platform-computed. The tool-verified statement is: spend moved from $5,377.43 to $8,029.35, direction up.
+- **Share of spend:** not available — this platform's tooling reports single-platform totals only, no share-of-spend output.
+
+**(4) Data source**
+- **Ad platform (fixture)** — confirmed by both `check_performance` outputs and the platform context. Per the source-of-truth reminder, media metrics (spend, conversions, CPA) come from the ad platform, never the warehouse.
+
+**(5) Data completeness**
+- Both windows report `data_complete_through: 2026-10-30`, which equals the anchor and the last week's `window_end`. **Neither window is flagged as incomplete** — last_week runs through the anchor date itself, and prior_week is a full 7-day window ending 2026-10-23. No partial days to flag and no earlier "last complete date" caveat needed.
+
+**Caveats**
+- Both windows are complete through 2026-10-30; no partial-day adjustment required.
+- Conversion volumes are modest (28 vs 42), so if you later look at CPA/conversion swings, treat percentage moves as noisy — the CPA difference here ($192.05 → $191.18) is small enough that I would not read it as a real efficiency change.
+- The comparison tool confirms direction but not magnitude; if a verified percentage is required for the report, it would need to come from the platform tooling rather than mental arithmetic.
+
+This was a read-only analysis — no changes proposed or made.
+
+[tool]
+## meta_ads spend — last_week vs prior_week (read-only analysis)
+
+**1) last_week spend**
+- **$3,039.99** (2 d.p., verbatim)
+- Window dates: **2026-10-24 → 2026-10-30**
+- Also returned in the same payload: conversions 16, CPA $190.00
+
+**2) prior_week spend**
+- **$3,761.84** (2 d.p., verbatim)
+- Window dates: **2026-10-17 → 2026-10-23**
+- Also returned: conversions 19, CPA $197.99
+
+**3) Platform-computed week-over-week change**
+- The platform comparison tool (metric=spend, window_a=last_week vs window_b=prior_week) returned: window_a_total 3,039.99, window_b_total 3,761.84, direction **"down"** — spend moved from $3,761.84 (prior_week) to $3,039.99 (last_week).
+- **No percentage change and no share-of-spend figure were emitted by the tool**, so I'm not reporting one; per the analysis workflow I don't derive week-over-week percentages by hand from two separate checks. The tool's directional result is: spend down week-over-week.
+
+**4) Data source**
+- **"ad platform (fixture)"** — the ad platform, per both the tool payloads and the platform context anchor. (Media metrics like spend come from the ad platform, never the warehouse.)
+
+**5) Data completeness**
+- Both windows report `data_complete_through: 2026-10-30`, which matches the data anchor (2026-10-30). **Neither window appears partial** — last complete date is **2026-10-30**.
+
+**Caveats**
+- Conversion volumes are small (16 vs 19 across the two weeks), so any paired CPA/conversion read is noisy — the spend decline itself is the platform-confirmed direction, but drivers aren't identifiable from these tool outputs alone.
+- Single-platform view only; no share-of-spend is computable with the tools available here.
+- No changes proposed or made — read-only, per your instruction.
+
+[tool]
+All data pulled. Here is the read-only synthesis for **reddit_ads** (data anchor 2026-10-30, source: ad platform (fixture)).
+
+## 1) Last week spend
+- **$775.25** — window **2026-10-24 → 2026-10-30** (7 full days)
+
+## 2) Prior week spend
+- **$752.84** — window **2026-10-17 → 2026-10-23** (7 full days)
+
+## 3) Platform-computed week-over-week change
+- Direction: **up** (via `compare_windows`, metric = spend)
+- The tool returned the direction only — no percentage or share-of-spend figure was computed by the platform, so I'm not quoting one. The absolute figures above are verbatim from the tool and can be used to verify the magnitude.
+
+## 4) Data source
+- **ad platform (fixture)** — confirmed by both the `read_context` data anchor and each `check_performance` response. Per the platform's source-of-truth reminder, media metrics (spend, conversions, CPA) come from the ad platform, not the warehouse.
+
+## 5) Data completeness
+- **Both windows are complete.** Each response reports `data_complete_through: 2026-10-30`, which matches the anchor date. Last week's window ends exactly on 2026-10-30 and prior week's ends 2026-10-23 — no partial days in either window, so no "last complete date" adjustment is needed.
+
+## Caveats
+- **Small conversion volumes:** 7 conversions last week vs. 6 prior week (CPA $110.75 vs. $125.47). At this volume, percentage-style claims about efficiency are noisy — treat the spend movement as directional.
+- The spend increase is modest against a small base; no plausible driver is stated by the tool, so per analysis guidelines this is a figure to monitor rather than a performance fact to act on.
+- Share of spend is not available from this tool (single-platform scope; no cross-platform denominator).
+- No changes proposed or made — read-only analysis, as requested.
+
+[ai]
+Yes — the mix shifted meaningfully last week, and **Google Ads gained share**. All figures below are spend from the ad platforms (fixture source), windows complete through the 2026-10-30 anchor.
+
+**Last week (2026-10-24 → 2026-10-30)** — total spend $11,844.59:
+
+| Platform | Last week | Prior week (2026-10-17 → 2026-10-23) | Share change |
+|---|---|---|---|
+| Google Ads | $8,029.35 | $5,377.43 | 54.4% → **67.8%** (+13.4 pts) |
+| Meta Ads | $3,039.99 | $3,761.84 | 38.0% → 25.7% (−12.4 pts) |
+| Reddit Ads | $775.25 | $752.84 | 7.6% → 6.5% (−1.1 pts) |
+
+**What moved:**
+- **Google Ads** drove the shift: spend rose from $5,377.43 to $8,029.35 (a ~49% increase on the platform-verified totals), pushing its share of total spend from 54.4% to 67.8%.
+- **Meta Ads** was the offset: spend fell from $3,761.84 to $3,039.99, dropping its share from 38.0% to 25.7%.
+- **Reddit Ads** was essentially flat in dollars ($752.84 → $775.25, direction "up" per the platform), but its share slipped a point because the total grew around it.
+
+**Caveats:**
+- Percentages above are shares computed from the two windows' platform-verified totals (each platform's compare tool confirms the direction of the spend move but emits no share figure).
+- The Google increase is large enough that it likely has a specific driver — a budget change, a new campaign, or a pacing adjustment. The tools confirm the move but not the cause, so that's worth investigating before treating it as an intentional rebalance.
+- Small conversion volumes (Google 28→42, Meta 19→16, Reddit 6→7 conversions week-over-week) make efficiency reads noisy; CPA was roughly flat on Google (~$192) and Meta (~$190–198).
+
+Happy to dig into what drove the Google spend jump, or fold this into the weekly report — just say the word.

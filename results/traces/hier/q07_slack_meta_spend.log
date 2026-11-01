@@ -1,0 +1,82 @@
+scenario: q07_slack_meta_spend (q_and_a, slack)
+prompt:   How much did we spend on Meta last week total?
+anchor:   2026-10-30  latency: 11536ms  tokens: 11406/532  cost: $0.0014
+======================================================================
+[human]
+How much did we spend on Meta last week total?
+
+[ai]
+  -> tool: read_file({"file_path": "/skills/paid-media-analysis/SKILL.md", "limit": 1000})
+  -> tool: list_platforms({})
+
+[tool]
+@@ lines 1-36 of 36 @@
+---
+name: paid-media-analysis
+description: How to investigate paid media performance across platforms - which tools to call, how to compare windows, and how to state figures so they can be verified.
+---
+
+# Paid Media Analysis
+
+## Workflow
+
+1. Call `list_platforms` first if you are unsure what platforms, metrics, or
+   windows exist.
+2. For a single platform question, call `check_platform_performance`.
+3. For any "did it get better or worse" question, call
+   `compare_platform_windows` - never compute week-over-week changes in your
+   head from two separate checks.
+4. For cross-platform questions, check every platform, then compare shares.
+
+## How to state figures
+
+- Quote the **absolute values for both windows**, not just the recent value
+  with a percentage. "Spend moved from $5,377.43 to $8,029.35 (+49.3%)" is
+  correct; "spend is up 49%" alone is not.
+- Name the metric, platform, window dates, and source with every figure.
+- Never mix metrics across sources: media metrics (spend, impressions, clicks,
+  conversions) come from the ad platforms. Pipeline outcomes come from the
+  warehouse (see the wiki's source-of-truth page).
+- If the data window is incomplete, say so explicitly and give the last
+  complete date.
+
+## Judgment
+
+- Small conversion volumes make percentage changes noisy - flag wide
+  uncertainty instead of over-reading a move.
+- Do not recommend cutting the top spend driver off one bad week.
+- A performance change without a plausible driver is a question to
+  investigate, not a fact to report.
+
+[tool]
+{"platforms": ["google_ads", "meta_ads", "reddit_ads"], "metrics": ["spend", "conversions", "cpa"], "anchor": "2026-10-30", "windows": ["last_30d", "last_week", "prior_week"]}
+
+[ai]
+  -> tool: task({"description": "Get Meta Ads spend for last week", "subagent_type": "meta-ads-specialist"})
+
+[tool]
+**Meta Ads spend — last week (2026-10-24 → 2026-10-30): $3,039.99**
+Source: ad platform (Meta Ads), data complete through 2026-10-30.
+
+Compared to prior week (2026-10-17 → 2026-10-23) at **$3,761.84**, that's a **decrease of $721.85 (−19.2%)**.
+
+Context for the same window:
+- Conversions: 16 (prior week not pulled for this metric)
+- CPA: $190.00
+
+**Likely driver:** Not determinable from spend alone — the comparison confirms the drop is real (direction: down), but I don't have campaign- or ad-set-level breakdowns from this tool to attribute it (e.g., paused campaign, budget change, pacing). Flagging it as a question to investigate rather than a fact to report.
+
+**Caveats:** Data window is complete through 2026-10-30 (the anchor date), so no truncation issue. Conversion volume is small (16), so if you're looking at efficiency (CPA), treat week-over-week moves with wide uncertainty.
+
+Want me to pull conversions/CPA comparisons for the same two weeks to see whether the spend cut came with an efficiency change?
+
+[ai]
+**Meta Ads spend last week (2026-10-24 → 2026-10-30): $3,039.99** — from the Meta Ads platform, with data complete through the 2026-10-30 anchor date.
+
+For context, that's down from **$3,761.84** the prior week (2026-10-17 → 2026-10-23), a decrease of $721.85 (−19.2%).
+
+Two caveats worth noting:
+- The spend drop has no identified driver yet — nothing in the top-line data says whether it was a budget change, pacing, or a paused campaign, so treat that as an open question rather than a fact.
+- Efficiency-wise, last week saw 16 conversions at a $190.00 CPA — but with volumes that small, week-over-week CPA moves are noisy.
+
+Want me to dig into what drove the spend decrease, or check whether efficiency (CPA/conversions) moved along with it?

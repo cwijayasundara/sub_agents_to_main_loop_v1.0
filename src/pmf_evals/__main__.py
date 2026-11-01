@@ -52,8 +52,10 @@ _AGENTS = {
 def _cmd_run(args: argparse.Namespace) -> int:
     scenarios = load_scenarios(args.scenarios or GOLDEN_PATH)
     agent = _AGENTS[args.agent]()
-    rows = run_suite(agent, scenarios, args.out)
+    rows = run_suite(agent, scenarios, args.out, trace_dir=args.trace_dir)
     print(f"ran {len(rows)} scenarios -> {args.out}")
+    if args.trace_dir:
+        print(f"traces -> {args.trace_dir}")
     return 0
 
 
@@ -62,8 +64,8 @@ def _cmd_grade(args: argparse.Namespace) -> int:
     reports = []
     for line in Path(args.results).read_text().splitlines():
         row = json.loads(line)
-        reports.append(grade_result(row, scenarios))
-    out = {"results": str(args.results), "reports": reports}
+        reports.append(grade_result(row, scenarios, arch=args.arch))
+    out = {"results": str(args.results), "arch": args.arch, "reports": reports}
     if args.out:
         Path(args.out).write_text(json.dumps(out, indent=2))
     errors = sum(1 for r in reports if r["verdict"] == "error")
@@ -91,12 +93,14 @@ def main(argv: list[str] | None = None) -> int:
     p_run.add_argument("--agent", choices=sorted(_AGENTS), default="echo")
     p_run.add_argument("--out", default="results.jsonl")
     p_run.add_argument("--scenarios")
+    p_run.add_argument("--trace-dir", help="write one transcript log per scenario here")
     p_run.set_defaults(func=_cmd_run)
 
     p_grade = sub.add_parser("grade")
     p_grade.add_argument("--results", required=True)
     p_grade.add_argument("--out")
     p_grade.add_argument("--scenarios")
+    p_grade.add_argument("--arch", choices=["folded", "hierarchical"], default="folded")
     p_grade.set_defaults(func=_cmd_grade)
 
     p_cmp = sub.add_parser("compare")

@@ -1,0 +1,104 @@
+scenario: q10_slack_unknown_metric (q_and_a, slack)
+prompt:   What was our pipeline value from Meta campaigns last week, per ad?
+anchor:   2026-10-30  latency: 10121ms  tokens: 12864/1078  cost: $0.0018
+======================================================================
+[human]
+What was our pipeline value from Meta campaigns last week, per ad?
+
+[ai]
+  -> tool: read_file({"file_path": "/skills/paid-media-analysis/SKILL.md", "limit": 1000})
+  -> tool: read_file({"file_path": "/wiki/source-of-truth.md", "limit": 1000})
+
+[tool]
+@@ lines 1-36 of 36 @@
+---
+name: paid-media-analysis
+description: How to investigate paid media performance across platforms - which tools to call, how to compare windows, and how to state figures so they can be verified.
+---
+
+# Paid Media Analysis
+
+## Workflow
+
+1. Call `list_platforms` first if you are unsure what platforms, metrics, or
+   windows exist.
+2. For a single platform question, call `check_platform_performance`.
+3. For any "did it get better or worse" question, call
+   `compare_platform_windows` - never compute week-over-week changes in your
+   head from two separate checks.
+4. For cross-platform questions, check every platform, then compare shares.
+
+## How to state figures
+
+- Quote the **absolute values for both windows**, not just the recent value
+  with a percentage. "Spend moved from $5,377.43 to $8,029.35 (+49.3%)" is
+  correct; "spend is up 49%" alone is not.
+- Name the metric, platform, window dates, and source with every figure.
+- Never mix metrics across sources: media metrics (spend, impressions, clicks,
+  conversions) come from the ad platforms. Pipeline outcomes come from the
+  warehouse (see the wiki's source-of-truth page).
+- If the data window is incomplete, say so explicitly and give the last
+  complete date.
+
+## Judgment
+
+- Small conversion volumes make percentage changes noisy - flag wide
+  uncertainty instead of over-reading a move.
+- Do not recommend cutting the top spend driver off one bad week.
+- A performance change without a plausible driver is a question to
+  investigate, not a fact to report.
+
+[tool]
+@@ lines 1-18 of 18 @@
+# Source of Truth (company wiki)
+
+Which system owns which number. The agent must never quote a metric from the
+wrong system, and must preserve the source when data cannot be joined.
+
+| Metric | Source of truth | Notes |
+|---|---|---|
+| Spend, impressions, clicks | Ad platforms (google_ads, meta_ads, reddit_ads) | Media activity lives with the platform |
+| Conversions (platform-reported) | Ad platforms | Platform conversion definitions differ per platform |
+| Leads, opportunities, pipeline $ | Warehouse | Post-conversion outcomes are only trustworthy here |
+| CPL / qualified leads | Warehouse | Derived from warehouse leads vs platform spend |
+
+## Rules
+
+1. Media questions → platform tools only. Pipeline questions → warehouse only.
+2. When a join is unreliable, do not fill the gap: state the limitation, plus
+   the source, date window, and attribution used for each quoted figure.
+3. A platform's conversion is not a qualified lead. Never mix them.
+
+[ai]
+  -> tool: list_platforms({})
+  -> tool: check_platform_performance({"platform": "meta_ads", "window": "last_week"})
+
+[tool]
+{"platforms": ["google_ads", "meta_ads", "reddit_ads"], "metrics": ["spend", "conversions", "cpa"], "anchor": "2026-10-30", "windows": ["last_30d", "last_week", "prior_week"]}
+
+[tool]
+{"platform": "meta_ads", "window": "last_week", "window_start": "2026-10-24", "window_end": "2026-10-30", "totals": {"spend": 3039.99, "conversions": 16, "cpa": 190.0}, "source": "ad platform (fixture)", "data_complete_through": "2026-10-30"}
+
+[ai]
+**Short answer: I can't pull pipeline value — and I won't estimate it from platform data.**
+
+Here's why, plus what I *can* give you:
+
+**Why pipeline value isn't available:**
+- Pipeline $, leads, and opportunities are **warehouse metrics** (per the source-of-truth rules). My ad platform tools (`meta_ads`) only expose media metrics: spend, impressions, clicks, conversions, CPA. There is no warehouse query tool available to me here.
+- The **"per ad" breakdown is also unavailable** — the platform tool returns account-level totals for meta_ads only, not ad-level or campaign-level rows.
+- I won't substitute Meta's reported conversions as a proxy. Per the wiki: *"A platform's conversion is not a qualified lead. Never mix them."*
+
+**What Meta did report, media-side** (source: meta_ads ad platform, window 2026-10-24 → 2026-10-30, complete through 2026-10-30):
+| Metric | Value |
+|---|---|
+| Spend | $3,039.99 |
+| Conversions (platform-reported) | 16 |
+| CPA | $190.00 |
+
+**To get pipeline value per ad, you'd need to:**
+1. Pull leads/opportunities/pipeline $ from the **warehouse**, filtered to Meta-sourced records for 2026-10-24 → 2026-10-30.
+2. Get ad-level spend from Meta's own reporting UI or API to compute pipeline-per-ad.
+3. Note that even then, the join between platform clicks and warehouse leads is attribution-dependent — any figure should state which attribution model was used.
+
+If you can get warehouse access or an export, I'm happy to work through the math with you — I just can't originate that number myself.

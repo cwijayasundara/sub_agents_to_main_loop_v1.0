@@ -87,3 +87,40 @@ def test_50_tool_agents_registered():
 
     assert "fireworks-50" in _AGENTS
     assert "fireworks-50-routed" in _AGENTS
+
+
+def test_grade_accepts_arch_flag(tmp_path):
+    """grade --arch hierarchical counts task-delegation as correct routing."""
+    import json as _json
+
+    from pmf_evals.grader import grade_result  # noqa: F401
+
+    results = tmp_path / "results.jsonl"
+    r1 = subprocess.run(
+        [sys.executable, "-m", "pmf_evals", "run", "--agent", "echo", "--out", str(results)],
+        capture_output=True, text=True,
+    )
+    assert r1.returncode == 0
+    graded = tmp_path / "graded.json"
+    r2 = subprocess.run(
+        [sys.executable, "-m", "pmf_evals", "grade", "--results", str(results),
+         "--out", str(graded), "--arch", "hierarchical"],
+        capture_output=True, text=True,
+    )
+    assert r2.returncode == 0, r2.stderr
+    assert _json.loads(graded.read_text())["arch"] == "hierarchical"
+
+
+def test_run_writes_trace_logs(tmp_path):
+    """run --trace-dir writes one human-readable log per scenario."""
+    traces = tmp_path / "traces"
+    r = subprocess.run(
+        [sys.executable, "-m", "pmf_evals", "run", "--agent", "echo",
+         "--out", str(tmp_path / "results.jsonl"), "--trace-dir", str(traces)],
+        capture_output=True, text=True,
+    )
+    assert r.returncode == 0, r.stderr
+    logs = list(traces.glob("*.log"))
+    assert len(logs) == 15
+    content = logs[0].read_text()
+    assert "tool" in content.lower() or "answer" in content.lower()

@@ -1,0 +1,238 @@
+scenario: q02_weekly_cpa_movers (weekly_report, scheduled)
+prompt:   For the weekly report: which platforms had the biggest CPA change last week versus the week before, and what likely drove it?
+anchor:   2026-10-30  latency: 40241ms  tokens: 27968/4715  cost: $0.0052
+======================================================================
+[human]
+For the weekly report: which platforms had the biggest CPA change last week versus the week before, and what likely drove it?
+
+[ai]
+  -> tool: read_file({"file_path": "/skills/paid-media-analysis/SKILL.md", "limit": 1000})
+  -> tool: read_file({"file_path": "/skills/paid-media-report/SKILL.md", "limit": 1000})
+  -> tool: list_platforms({})
+
+[tool]
+@@ lines 1-36 of 36 @@
+---
+name: paid-media-analysis
+description: How to investigate paid media performance across platforms - which tools to call, how to compare windows, and how to state figures so they can be verified.
+---
+
+# Paid Media Analysis
+
+## Workflow
+
+1. Call `list_platforms` first if you are unsure what platforms, metrics, or
+   windows exist.
+2. For a single platform question, call `check_platform_performance`.
+3. For any "did it get better or worse" question, call
+   `compare_platform_windows` - never compute week-over-week changes in your
+   head from two separate checks.
+4. For cross-platform questions, check every platform, then compare shares.
+
+## How to state figures
+
+- Quote the **absolute values for both windows**, not just the recent value
+  with a percentage. "Spend moved from $5,377.43 to $8,029.35 (+49.3%)" is
+  correct; "spend is up 49%" alone is not.
+- Name the metric, platform, window dates, and source with every figure.
+- Never mix metrics across sources: media metrics (spend, impressions, clicks,
+  conversions) come from the ad platforms. Pipeline outcomes come from the
+  warehouse (see the wiki's source-of-truth page).
+- If the data window is incomplete, say so explicitly and give the last
+  complete date.
+
+## Judgment
+
+- Small conversion volumes make percentage changes noisy - flag wide
+  uncertainty instead of over-reading a move.
+- Do not recommend cutting the top spend driver off one bad week.
+- A performance change without a plausible driver is a question to
+  investigate, not a fact to report.
+
+[tool]
+@@ lines 1-29 of 29 @@
+---
+name: paid-media-report
+description: Structure for the weekly paid media report - per-platform section, cross-platform synthesis, recommendations, and required caveats.
+---
+
+# Weekly Paid Media Report
+
+## Structure
+
+1. **Header** - reporting window dates and the data-complete-through date.
+2. **Account summary** - totals across platforms: spend, conversions, CPA,
+   each with both weeks' absolute values and the change.
+3. **Per-platform detail** - one section per platform:
+   - a table: spend, conversions, CPA for last week AND prior week
+     (absolute values, then the change)
+   - one sentence on what most likely drove the movement
+4. **Recommendations** - exactly one actionable recommendation per platform,
+   consistent with that platform's movement. A recommendation to change
+   something must go through the writes skill (proposal, never direct action).
+5. **Caveats** - data completeness, small-volume warnings, any metric that
+   could not be reconciled across sources.
+
+## Rules
+
+- Every number in the report must be traceable to a tool result in the
+  conversation. If you did not see it from a tool, do not write it.
+- Percentages without absolute values are not allowed.
+- Preserve each metric's source boundary (see the wiki).
+- Keep the report scannable: tables for numbers, prose for interpretation.
+
+[tool]
+{"platforms": ["google_ads", "meta_ads", "reddit_ads"], "metrics": ["spend", "conversions", "cpa"], "anchor": "2026-10-30", "windows": ["last_30d", "last_week", "prior_week"]}
+
+[ai]
+I'll follow the paid-media skills: get the platform list (done — google_ads, meta_ads, reddit_ads, anchor 2026-10-30), then pull week-over-week CPA per platform. First, let me check for supporting docs the skills reference.
+  -> tool: ls({"path": "/skills"})
+  -> tool: glob({"pattern": "/skills/**/*"})
+
+[tool]
+['/skills/paid-media-analysis/', '/skills/paid-media-report/', '/skills/paid-media-writes/']
+
+[tool]
+['/skills/paid-media-analysis/SKILL.md', '/skills/paid-media-report/SKILL.md', '/skills/paid-media-writes/SKILL.md']
+
+[ai]
+The skills' referenced wiki files don't exist on disk, and the direct platform tools (`check_platform_performance`, `compare_platform_windows`) aren't in my toolset — but the read-only platform specialists have them. I'll delegate the WoW CPA pull per platform, in parallel, with the skill's requirements baked into each prompt.
+  -> tool: task({"description": "Google Ads WoW CPA analysis", "prompt": "Read-only analysis task. Use your Google Ads tools. Do not propose or apply any changes.\n\nContext: Weekly paid media report. Data anchor date is 2026-10-30. I need last week vs the prior week for Google Ads, with the following EXACT requirements (these are report rules I must follow):\n\n1. Call compare_platform_windows for the last_week and prior_week windows (do NOT compute week-over-week changes yourself from two separate pulls). Report the exact window date ranges the tool returns for each window.\n2. Give absolute values for BOTH weeks for: spend, conversions, CPA \u2014 plus the change between them (absolute and %) for CPA and spend.\n3. Also give an account-level driver read: which campaign(s)/ad group(s) drove the CPA change \u2014 e.g., spend shifts between campaigns, conversion volume drops, or CPA moves at the campaign level. Name the specific campaigns with their figures for both weeks where your tools show them.\n4. State the data-complete-through date (if the last week window is partial, say so and give the last complete date).\n5. Note conversion volume (absolute number) for each week \u2014 small volumes make % changes noisy, so I need to judge that.\n\nReturn a compact structured summary: (a) window dates, (b) both-week absolute values + changes, (c) top driver explanation with supporting campaign figures, (d) data completeness note. Every figure must come from a tool result you actually ran \u2014 do not estimate or fill gaps from memory.", "subagent_type": "google-ads-specialist"})
+  -> tool: task({"description": "Meta Ads WoW CPA analysis", "prompt": "Read-only analysis task. Use your Meta Ads tools. Do not propose or apply any changes.\n\nContext: Weekly paid media report. Data anchor date is 2026-10-30. I need last week vs the prior week for Meta Ads, with the following EXACT requirements (these are report rules I must follow):\n\n1. Call compare_platform_windows for the last_week and prior_week windows (do NOT compute week-over-week changes yourself from two separate pulls). Report the exact window date ranges the tool returns for each window.\n2. Give absolute values for BOTH weeks for: spend, conversions, CPA \u2014 plus the change between them (absolute and %) for CPA and spend.\n3. Also give an account-level driver read: which campaign(s)/ad set(s) drove the CPA change \u2014 e.g., spend shifts between campaigns, conversion volume drops, or CPA moves at the campaign level. Name the specific campaigns with their figures for both weeks where your tools show them.\n4. State the data-complete-through date (if the last week window is partial, say so and give the last complete date).\n5. Note conversion volume (absolute number) for each week \u2014 small volumes make % changes noisy, so I need to judge that.\n\nReturn a compact structured summary: (a) window dates, (b) both-week absolute values + changes, (c) top driver explanation with supporting campaign figures, (d) data completeness note. Every figure must come from a tool result you actually ran \u2014 do not estimate or fill gaps from memory.", "subagent_type": "meta-ads-specialist"})
+  -> tool: task({"description": "Reddit Ads WoW CPA analysis", "prompt": "Read-only analysis task. Use your Reddit Ads tools. Do not propose or apply any changes.\n\nContext: Weekly paid media report. Data anchor date is 2026-10-30. I need last week vs the prior week for Reddit Ads, with the following EXACT requirements (these are report rules I must follow):\n\n1. Call compare_platform_windows for the last_week and prior_week windows (do NOT compute week-over-week changes yourself from two separate pulls). Report the exact window date ranges the tool returns for each window.\n2. Give absolute values for BOTH weeks for: spend, conversions, CPA \u2014 plus the change between them (absolute and %) for CPA and spend.\n3. Also give an account-level driver read: which campaign(s)/ad group(s) drove the CPA change \u2014 e.g., spend shifts between campaigns, conversion volume drops, or CPA moves at the campaign level. Name the specific campaigns with their figures for both weeks where your tools show them.\n4. State the data-complete-through date (if the last week window is partial, say so and give the last complete date).\n5. Note conversion volume (absolute number) for each week \u2014 small volumes make % changes noisy, so I need to judge that.\n\nReturn a compact structured summary: (a) window dates, (b) both-week absolute values + changes, (c) top driver explanation with supporting campaign figures, (d) data completeness note. Every figure must come from a tool result you actually ran \u2014 do not estimate or fill gaps from memory.", "subagent_type": "reddit-ads-specialist"})
+
+[tool]
+Error invoking tool 'task' with kwargs {'description': 'Google Ads WoW CPA analysis', 'prompt': 'Read-only analysis task. Use your Google Ads tools. Do not propose or apply any changes.\n\nContext: Weekly paid media report. Data anchor date is 2026-10-30. I need last week vs the prior week for Google Ads, with the following EXACT requirements (these are report rules I must follow):\n\n1. Call compare_platform_windows for the last_week and prior_week windows (do NOT compute week-over-week changes yourself from two separate pulls). Report the exact window date ranges the tool returns for each window.\n2. Give absolute values for BOTH weeks for: spend, conversions, CPA — plus the change between them (absolute and %) for CPA and spend.\n3. Also give an account-level driver read: which campaign(s)/ad group(s) drove the CPA change — e.g., spend shifts between campaigns, conversion volume drops, or CPA moves at the campaign level. Name the specific campaigns with their figures for both weeks where your tools show them.\n4. State the data-complete-through date (if the last week window is partial, say so and give the last complete date).\n5. Note conversion volume (absolute number) for each week — small volumes make % changes noisy, so I need to judge that.\n\nReturn a compact structured summary: (a) window dates, (b) both-week absolute values + changes, (c) top driver explanation with supporting campaign figures, (d) data completeness note. Every figure must come from a tool result you actually ran — do not estimate or fill gaps from memory.', 'subagent_type': 'google-ads-specialist'} with error:
+ prompt: Value error, Unexpected argument 'prompt'; put all instructions for the subagent in `description`.
+ Please fix the error and try again.
+
+[tool]
+Error invoking tool 'task' with kwargs {'description': 'Meta Ads WoW CPA analysis', 'prompt': 'Read-only analysis task. Use your Meta Ads tools. Do not propose or apply any changes.\n\nContext: Weekly paid media report. Data anchor date is 2026-10-30. I need last week vs the prior week for Meta Ads, with the following EXACT requirements (these are report rules I must follow):\n\n1. Call compare_platform_windows for the last_week and prior_week windows (do NOT compute week-over-week changes yourself from two separate pulls). Report the exact window date ranges the tool returns for each window.\n2. Give absolute values for BOTH weeks for: spend, conversions, CPA — plus the change between them (absolute and %) for CPA and spend.\n3. Also give an account-level driver read: which campaign(s)/ad set(s) drove the CPA change — e.g., spend shifts between campaigns, conversion volume drops, or CPA moves at the campaign level. Name the specific campaigns with their figures for both weeks where your tools show them.\n4. State the data-complete-through date (if the last week window is partial, say so and give the last complete date).\n5. Note conversion volume (absolute number) for each week — small volumes make % changes noisy, so I need to judge that.\n\nReturn a compact structured summary: (a) window dates, (b) both-week absolute values + changes, (c) top driver explanation with supporting campaign figures, (d) data completeness note. Every figure must come from a tool result you actually ran — do not estimate or fill gaps from memory.', 'subagent_type': 'meta-ads-specialist'} with error:
+ prompt: Value error, Unexpected argument 'prompt'; put all instructions for the subagent in `description`.
+ Please fix the error and try again.
+
+[tool]
+Error invoking tool 'task' with kwargs {'description': 'Reddit Ads WoW CPA analysis', 'prompt': 'Read-only analysis task. Use your Reddit Ads tools. Do not propose or apply any changes.\n\nContext: Weekly paid media report. Data anchor date is 2026-10-30. I need last week vs the prior week for Reddit Ads, with the following EXACT requirements (these are report rules I must follow):\n\n1. Call compare_platform_windows for the last_week and prior_week windows (do NOT compute week-over-week changes yourself from two separate pulls). Report the exact window date ranges the tool returns for each window.\n2. Give absolute values for BOTH weeks for: spend, conversions, CPA — plus the change between them (absolute and %) for CPA and spend.\n3. Also give an account-level driver read: which campaign(s)/ad group(s) drove the CPA change — e.g., spend shifts between campaigns, conversion volume drops, or CPA moves at the campaign level. Name the specific campaigns with their figures for both weeks where your tools show them.\n4. State the data-complete-through date (if the last week window is partial, say so and give the last complete date).\n5. Note conversion volume (absolute number) for each week — small volumes make % changes noisy, so I need to judge that.\n\nReturn a compact structured summary: (a) window dates, (b) both-week absolute values + changes, (c) top driver explanation with supporting campaign figures, (d) data completeness note. Every figure must come from a tool result you actually ran — do not estimate or fill gaps from memory.', 'subagent_type': 'reddit-ads-specialist'} with error:
+ prompt: Value error, Unexpected argument 'prompt'; put all instructions for the subagent in `description`.
+ Please fix the error and try again.
+
+[ai]
+The task tool wants everything in `description` — retrying all three in parallel with the instructions consolidated.
+  -> tool: task({"description": "Read-only analysis task. Use your Google Ads tools. Do not propose or apply any changes. Context: weekly paid media report; data anchor 2026-10-30. Requirements (report rules I must follow): 1) Call compare_platform_windows for the last_week and prior_week windows (do NOT compute week-over-week changes yourself from two separate pulls). Report the exact window date ranges the tool returns. 2) Give absolute values for BOTH weeks for spend, conversions, CPA \u2014 plus the change (absolute and %) for CPA and spend. 3) Give an account-level driver read: which campaign(s) drove the CPA change \u2014 spend shifts, conversion volume drops, or campaign-level CPA moves. Name specific campaigns with their figures for both weeks where your tools show them. 4) State the data-complete-through date; if the last week window is partial, say so and give the last complete date. 5) Note absolute conversion volume per week (small volumes make % changes noisy). Return a compact structured summary: (a) window dates, (b) both-week absolute values + changes, (c) top driver explanation with supporting campaign figures, (d) data completeness note. Every figure must come from a tool result you actually ran \u2014 do not estimate or fill gaps from memory.", "subagent_type": "google-ads-specialist"})
+  -> tool: task({"description": "Read-only analysis task. Use your Meta Ads tools. Do not propose or apply any changes. Context: weekly paid media report; data anchor 2026-10-30. Requirements (report rules I must follow): 1) Call compare_platform_windows for the last_week and prior_week windows (do NOT compute week-over-week changes yourself from two separate pulls). Report the exact window date ranges the tool returns. 2) Give absolute values for BOTH weeks for spend, conversions, CPA \u2014 plus the change (absolute and %) for CPA and spend. 3) Give an account-level driver read: which campaign(s)/ad set(s) drove the CPA change \u2014 spend shifts, conversion volume drops, or campaign-level CPA moves. Name specific campaigns with their figures for both weeks where your tools show them. 4) State the data-complete-through date; if the last week window is partial, say so and give the last complete date. 5) Note absolute conversion volume per week (small volumes make % changes noisy). Return a compact structured summary: (a) window dates, (b) both-week absolute values + changes, (c) top driver explanation with supporting campaign figures, (d) data completeness note. Every figure must come from a tool result you actually ran \u2014 do not estimate or fill gaps from memory.", "subagent_type": "meta-ads-specialist"})
+  -> tool: task({"description": "Read-only analysis task. Use your Reddit Ads tools. Do not propose or apply any changes. Context: weekly paid media report; data anchor 2026-10-30. Requirements (report rules I must follow): 1) Call compare_platform_windows for the last_week and prior_week windows (do NOT compute week-over-week changes yourself from two separate pulls). Report the exact window date ranges the tool returns. 2) Give absolute values for BOTH weeks for spend, conversions, CPA \u2014 plus the change (absolute and %) for CPA and spend. 3) Give an account-level driver read: which campaign(s) drove the CPA change \u2014 spend shifts, conversion volume drops, or campaign-level CPA moves. Name specific campaigns with their figures for both weeks where your tools show them. 4) State the data-complete-through date; if the last week window is partial, say so and give the last complete date. 5) Note absolute conversion volume per week (small volumes make % changes noisy). Return a compact structured summary: (a) window dates, (b) both-week absolute values + changes, (c) top driver explanation with supporting campaign figures, (d) data completeness note. Every figure must come from a tool result you actually ran \u2014 do not estimate or fill gaps from memory.", "subagent_type": "reddit-ads-specialist"})
+
+[tool]
+Analysis complete (read-only; no changes proposed or applied). All figures below are from tool results run in this conversation: `check_performance` (per-window pulls) and `compare_windows` for each metric — my environment's `compare_windows` is the compare-platform-windows call (platform fixed to google_ads). No week-over-week math was done across separate pulls; the tool returned both windows' totals and directions directly.
+
+## Google Ads — Weekly Summary (anchor 2026-10-30)
+
+**(a) Window dates (as returned by the tool)**
+- last_week: **2026-10-24 → 2026-10-30**
+- prior_week: **2026-10-17 → 2026-10-23**
+
+**(b) Absolute values, both weeks + changes**
+
+| Metric | prior_week | last_week | Change |
+|---|---|---|---|
+| Spend | $5,377.43 | $8,029.35 | **+$2,651.92 (+49.3%)** — tool direction: up |
+| Conversions | 28 | 42 | **+14 (+50.0%)** — tool direction: up |
+| CPA | $192.05 | $191.18 | **−$0.87 (−0.45%)** — tool direction: flat |
+
+**Account-level driver read**
+- The CPA movement is effectively nil; the real story is **scaled volume at unchanged efficiency**: spend rose +$2,651.92 (+49.3%) and conversions rose +14 (+50.0%) — conversions grew proportionally with spend, so incremental dollars converted at the prior week's CPA (~$191–192).
+- **Campaign-level attribution:** my available Google Ads tools return account-level totals only; they do not expose a campaign breakdown, so I cannot name specific campaigns or their figures, and I won't estimate them. The supportable account-level read is: the CPA change was not driven by a conversion-volume drop (conversions were up) — it was flat because spend and conversion volume moved together.
+
+**(c) Top driver explanation (summary sentence)**
+CPA stayed flat ($192.05 → $191.18) because a +49.3% spend increase bought a proportional +50.0% conversion increase — volume expansion, not an efficiency shift; no evidence of a conversion drop or campaign-level CPA deterioration at the account level my tools expose.
+
+**(d) Data completeness & caveats**
+- Tool reports `data_complete_through: 2026-10-30`, which equals the last_week window end — **both windows appear complete through the anchor; last_week is not flagged as partial** (last complete date: 2026-10-30).
+- **Small-volume caveat:** 28 vs 42 conversions per week is a small base — % changes on conversions (and derived CPA) are noisy; the flat CPA reading is low-risk here, but week-to-week swings of a few conversions could move CPA by ~$5–10. Treat single-week moves as indicative.
+- Source: ad platform (fixture) per the data anchor; media metrics from the platform, not the warehouse.
+
+[tool]
+All checks ran. Here is the compact synthesis — read-only, no changes proposed or applied.
+
+# Meta Ads — Weekly WoW Synthesis (anchor 2026-10-30)
+
+**(a) Window dates** (as returned by the tool, not constructed by me)
+- `last_week`: **2026-10-24 → 2026-10-30** (7 days)
+- `prior_week`: **2026-10-17 → 2026-10-23** (7 days)
+- Comparison method: `compare_windows` was called for all three metrics (spend, conversions, cpa); the per-window figures below come from `check_performance` for each window and match the totals embedded in the `compare_windows` responses. No week-over-week change was derived from two independent pulls.
+
+**(b) Both-week absolute values + changes** (source: ad platform, via check_performance / compare_windows)
+
+| Metric | prior_week (10-17→10-23) | last_week (10-24→10-30) | Change |
+|---|---|---|---|
+| Spend | $3,761.84 | $3,039.99 | −$721.85 (−19.2%)* |
+| Conversions | 19 | 16 | −3 (−15.8%)* |
+| CPA | $197.99 | $190.00 | −$7.99 (−4.0%)* |
+
+\* The comparison tool returns direction only ("down" for all three); the deltas above are simple arithmetic on the tool-returned totals, shown for sizing. Direction and both absolute totals are tool-reported.
+
+**(c) Driver read — limitation up front:** My Meta tools return **account-level totals only**; no campaign or ad set rows are exposed. I cannot name any campaign or attribute the move to specific spend shifts or conversion drops at the campaign level — none were shown to me, and I will not invent them.
+
+What the account-level pattern does show:
+- Spend fell (−19.2%) faster than conversions (−15.8%), so CPA **improved** slightly (−$7.99, −4.0%). The WoW move is consistent with a broad spend reduction rather than a conversion-efficiency collapse: there was no CPA deterioration to explain.
+- Both spend and conversions moved down together in the same direction, which fits a pacing/budget pullback; a delivery or tracking problem would typically show conversions falling while spend held.
+- Per the analysis skill: a change I can see in totals but cannot attribute to a named driver is a **question to investigate** (e.g., pull campaign-level breakdown in Ads Manager), not a fact to report. I flag it as such rather than guessing.
+
+**(d) Data completeness note**
+- Both `check_performance` calls report `data_complete_through: 2026-10-30`, which equals the anchor date and the `last_week` window end. The last_week window is a full 7-day span ending at the anchor; nothing in the tool output indicates it is partial. Last complete date: **2026-10-30**.
+- **Small-volume caveat:** 19 → 16 conversions is a 3-conversion difference. At this volume, weekly conversion counts are noisy and the −15.8% conversion change (and even the −4.0% CPA move) is within plausible week-to-week variation — do not over-read either.
+- Source is the ad platform (fixture), per the platform context reminder; media metrics only — no warehouse/pipeline figures are mixed in here.
+
+[tool]
+All tool calls ran. Here's the compact synthesis — every figure below is quoted directly from the `compare_windows` / `check_performance` results (single compared pull, not two separate checks).
+
+## Reddit Ads — Weekly Summary (data anchor 2026-10-30)
+
+**(a) Window dates (as returned by the tool)**
+- last_week: **2026-10-24 → 2026-10-30**
+- prior_week: **2026-10-17 → 2026-10-23**
+
+**(b) Both-week absolute values + changes**
+
+| Metric | prior_week (10/17–10/23) | last_week (10/24–10/30) | Change |
+|---|---|---|---|
+| Spend | $752.84 | $775.25 | **+$22.41 (+2.98%)** |
+| Conversions | 6 | 7 | +1 (+16.7% on tiny base — noisy) |
+| CPA | $125.47 | $110.75 | **−$14.72 (−11.73%)** |
+
+(Deltas computed from the single `compare_windows` pull; tool confirms directions: spend up, conversions up, CPA down.)
+
+**(c) Driver read**
+- Account-level: the CPA improvement is a **conversion-volume story, not a spend-efficiency story**. Spend rose slightly (+$22.41, +2.98%) while conversions ticked up 6 → 7. One extra conversion at this spend level is enough to produce the full −11.73% CPA move, so treat the improvement as within noise rather than a confirmed efficiency gain.
+- **Campaign-level figures: not available from my tools.** `check_performance` and `compare_windows` for reddit_ads return account-level totals only (spend, conversions, CPA); no campaign breakdown is exposed. Per the reporting rules I cannot name specific campaigns or attribute the CPA move to campaign-level spend shifts or CPA moves — flagging this as a gap rather than estimating. The account-level attribution above (conversion volume up vs. spend roughly flat) is the full extent of what the tool output supports.
+
+**(d) Data completeness**
+- Tool-reported `data_complete_through`: **2026-10-30** (both windows). The last_week window (10/24–10/30) ends exactly at the anchor date and is a full 7 days, so **neither window is partial** — no backfill caveat needed.
+- Small-volume caveat: 6 vs. 7 conversions per week means % changes (CPA −11.7%, conversions +16.7%) are noisy; a single conversion swings CPA materially at ~$775 weekly spend.
+
+No changes proposed or applied — read-only analysis, as requested.
+
+[ai]
+All three platforms pulled week-over-week via compare-windows (windows: **prior week 10/17–10/23, last week 10/24–10/30**; data complete through **2026-10-30** on all three, so no partial-window caveat).
+
+## Answer: Reddit Ads had the biggest CPA change
+
+| Platform | CPA prior wk | CPA last wk | Δ CPA | Spend Δ | Conversions Δ |
+|---|---|---|---|---|---|
+| **Reddit Ads** | $125.47 | $110.75 | **−$14.72 (−11.7%)** | +$22.41 (+2.98%) | 6 → 7 |
+| Meta Ads | $197.99 | $190.00 | −$7.99 (−4.0%) | −$721.85 (−19.2%) | 19 → 16 |
+| Google Ads | $192.05 | $191.18 | −$0.87 (−0.45%, flat) | +$2,651.92 (+49.3%) | 28 → 42 |
+
+## What likely drove each
+
+- **Reddit (−11.7%)** — a conversion-volume story, not efficiency: spend was nearly flat (+$22.41) and conversions ticked 6 → 7. One extra conversion at ~$775/week spend is enough to produce the entire CPA move. Treat this as **within noise**, not a confirmed efficiency gain.
+- **Meta (−4.0%)** — spend fell faster (−19.2%) than conversions (−15.8%), so CPA drifted down with the budget pullback. The same-direction move fits a pacing/budget reduction; a tracking or delivery problem would typically show conversions falling while spend held.
+- **Google (flat)** — the notable story is scale, not CPA: spend +49.3% bought a proportional +50.0% conversion increase, so incremental dollars converted at the prior week's ~$191–192 CPA. No efficiency deterioration to explain.
+
+## Caveats for the report
+
+- **Small volumes:** 6–7 conversions/week (Reddit), 16–19 (Meta), 28–42 (Google). All % changes here sit on small bases; single conversions swing Reddit CPA materially.
+- **Attribution is account-level only.** None of the three platforms' available reporting exposes campaign-level rows, so drivers above are inferred from totals, not named campaigns. Campaign-level breakdowns (e.g., in Ads Manager) would be the follow-up if any of these moves need explaining further.
+- No metric conflicts to flag across sources — all figures are platform-reported media metrics; no warehouse/pipeline figures were mixed in.
+
+One implication worth carrying into recommendations: Google's spend scale-up came at flat CPA, so it should stay in place — no basis in this data for pulling it back. Happy to draft the full weekly report (per-platform sections + one recommendation each) from these same numbers if you want it.

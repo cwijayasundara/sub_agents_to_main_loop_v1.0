@@ -1,0 +1,260 @@
+scenario: q01_weekly_spend_wow (weekly_report, scheduled)
+prompt:   Produce the weekly paid media report: how did total spend move last week versus the week before, per platform? Give the numbers and the change.
+anchor:   2026-10-30  latency: 45135ms  tokens: 19144/5606  cost: $0.0047
+======================================================================
+[human]
+Produce the weekly paid media report: how did total spend move last week versus the week before, per platform? Give the numbers and the change.
+
+[ai]
+  -> tool: read_file({"file_path": "/skills/paid-media-report/SKILL.md", "limit": 1000})
+  -> tool: read_file({"file_path": "/skills/paid-media-analysis/SKILL.md", "limit": 1000})
+  -> tool: list_platforms({})
+
+[tool]
+@@ lines 1-29 of 29 @@
+---
+name: paid-media-report
+description: Structure for the weekly paid media report - per-platform section, cross-platform synthesis, recommendations, and required caveats.
+---
+
+# Weekly Paid Media Report
+
+## Structure
+
+1. **Header** - reporting window dates and the data-complete-through date.
+2. **Account summary** - totals across platforms: spend, conversions, CPA,
+   each with both weeks' absolute values and the change.
+3. **Per-platform detail** - one section per platform:
+   - a table: spend, conversions, CPA for last week AND prior week
+     (absolute values, then the change)
+   - one sentence on what most likely drove the movement
+4. **Recommendations** - exactly one actionable recommendation per platform,
+   consistent with that platform's movement. A recommendation to change
+   something must go through the writes skill (proposal, never direct action).
+5. **Caveats** - data completeness, small-volume warnings, any metric that
+   could not be reconciled across sources.
+
+## Rules
+
+- Every number in the report must be traceable to a tool result in the
+  conversation. If you did not see it from a tool, do not write it.
+- Percentages without absolute values are not allowed.
+- Preserve each metric's source boundary (see the wiki).
+- Keep the report scannable: tables for numbers, prose for interpretation.
+
+[tool]
+@@ lines 1-36 of 36 @@
+---
+name: paid-media-analysis
+description: How to investigate paid media performance across platforms - which tools to call, how to compare windows, and how to state figures so they can be verified.
+---
+
+# Paid Media Analysis
+
+## Workflow
+
+1. Call `list_platforms` first if you are unsure what platforms, metrics, or
+   windows exist.
+2. For a single platform question, call `check_platform_performance`.
+3. For any "did it get better or worse" question, call
+   `compare_platform_windows` - never compute week-over-week changes in your
+   head from two separate checks.
+4. For cross-platform questions, check every platform, then compare shares.
+
+## How to state figures
+
+- Quote the **absolute values for both windows**, not just the recent value
+  with a percentage. "Spend moved from $5,377.43 to $8,029.35 (+49.3%)" is
+  correct; "spend is up 49%" alone is not.
+- Name the metric, platform, window dates, and source with every figure.
+- Never mix metrics across sources: media metrics (spend, impressions, clicks,
+  conversions) come from the ad platforms. Pipeline outcomes come from the
+  warehouse (see the wiki's source-of-truth page).
+- If the data window is incomplete, say so explicitly and give the last
+  complete date.
+
+## Judgment
+
+- Small conversion volumes make percentage changes noisy - flag wide
+  uncertainty instead of over-reading a move.
+- Do not recommend cutting the top spend driver off one bad week.
+- A performance change without a plausible driver is a question to
+  investigate, not a fact to report.
+
+[tool]
+{"platforms": ["google_ads", "meta_ads", "reddit_ads"], "metrics": ["spend", "conversions", "cpa"], "anchor": "2026-10-30", "windows": ["last_30d", "last_week", "prior_week"]}
+
+[ai]
+The skills are loaded. There are three platforms (google_ads, meta_ads, reddit_ads) with `spend`, `conversions`, and `cpa` available, and week-over-week windows. I'll delegate per-platform analysis to the platform specialists in parallel, then assemble the report.
+  -> tool: task({"description": "Google Ads WoW spend analysis", "subagent_type": "google-ads-specialist"})
+  -> tool: task({"description": "Meta Ads WoW spend analysis", "subagent_type": "meta-ads-specialist"})
+  -> tool: task({"description": "Reddit Ads WoW spend analysis", "subagent_type": "reddit-ads-specialist"})
+
+[tool]
+## Google Ads WoW Spend — Last Week vs Prior Week
+
+**Windows (complete through 2026-10-30 anchor):** last week 2026-10-24 → 10-30; prior week 2026-10-17 → 10-23. Source: ad platform (fixture).
+
+| Metric | Prior week | Last week | Change |
+|---|---|---|---|
+| Spend | $5,377.43 | $8,029.35 | **+$2,651.92 (+49.3%)** |
+| Conversions | 28 | 42 | +14 (+50.0%) |
+| CPA | $192.05 | $191.18 | −$0.87 (−0.5%) |
+
+**Read:** Spend jumped +49.3% WoW, and conversions scaled in near lockstep (+50.0%), leaving CPA essentially flat ($192.05 → $191.18). That pattern points to **deliberately increased budget/pace rather than efficiency decay** — the extra dollars bought roughly the same cost-per-conversion as before, not worse.
+
+**Caveats:**
+- **No granular driver visible.** My tooling gives platform-level totals only — I can't confirm *which* campaigns, ad groups, or keywords absorbed the +$2,652, or whether a budget change was made intentionally. If no one raised budgets last week, that's worth investigating before assuming it's planned scaling.
+- **Conversion volume is small** (28 → 42). At ~40/week, CPA is noisy week to week; the flat CPA is reassuring but not high-confidence.
+- **Attribution lag:** conversions in the last week's tail (10-29/10-30) may still be settling, which can understate last-week conversions slightly — though that would only bias CPA higher, and it's already flat.
+- Spend is the top-line mover but not a performance verdict — CPA held, so there's no case to pull back based on this week alone.
+
+[tool]
+## Meta Ads — Week-over-Week Spend Analysis
+
+**Windows** (source: ad platform, fixture; data complete through 2026-10-30):
+- Last week: 2026-10-24 → 2026-10-30
+- Prior week: 2026-10-17 → 2026-10-23
+
+### Spend (confirmed via `compare_windows`)
+- **Prior week: $3,761.84 → Last week: $3,039.99** — a decrease of **$721.85 (−19.2%)**, direction: **down**.
+
+### Context metrics (same platform source, both windows absolute)
+| Metric | Prior week | Last week | Change |
+|---|---|---|---|
+| Spend | $3,761.84 | $3,039.99 | −$721.85 (−19.2%) |
+| Conversions | 19 | 16 | −3 (−15.8%) |
+| CPA | $197.99 | $190.00 | −$7.99 (−4.0%) |
+
+### Likely driver
+Not determinable from the data available to me — I have platform-level totals only, with no campaign/ad-set/placement breakdown tool for Meta. The near-proportional move in conversions alongside spend (both down ~16–19%) is consistent with a budget or pacing reduction rather than a delivery or auction-quality problem, but that is a hypothesis to verify against campaign-level settings, not a reported fact.
+
+### Caveats
+- **Small conversion volumes** (19 vs 16) make conversion and CPA changes noisy; the −4.0% CPA improvement is within noise and should not be read as a real efficiency gain.
+- **Data completeness:** both windows report `data_complete_through: 2026-10-30` (the anchor date), so both appear complete — no truncation caveat.
+- One week is not a trend; a −19% spend move warrants a check of budget/pacing changes before any action. Per policy, no campaign changes are proposed from this read alone.
+
+[tool]
+**Reddit Ads — Week over Week (source: ad platform fixture, data complete through 2026-10-30)**
+
+| Metric | Prior week (Oct 17–23) | Last week (Oct 24–30) | Change |
+|---|---|---|---|
+| Spend | $752.84 | $775.25 | +$22.41 (+3.0%) |
+| Conversions | 6 | 7 | +1 |
+| CPA | $125.47 | $110.75 | −$14.72 (−11.7%) |
+
+**Read:** Spend was essentially flat (+3%), while one additional conversion drove CPA down ~12%. The CPA improvement is entirely arithmetic — a single extra conversion on near-flat spend — not evidence of a structural efficiency gain.
+
+**Likely driver:** Not identifiable from aggregate platform data. With no campaign/ad-level breakdown available through this tool, the conversion move can't be attributed to a specific change. A performance change without a plausible driver is a question to investigate, not a fact to report.
+
+**Caveats:**
+- **Very small volumes** — 6 vs 7 conversions means wide uncertainty; a one-conversion swing moves CPA by double digits. Don't over-read the −11.7%.
+- **Data completeness:** both windows are complete through the 2026-10-30 anchor, so no truncation issue this week.
+- **Source:** media metrics (spend, conversions) are from the ad platform, per the source-of-truth rule — no warehouse pipeline figures were mixed in.
+
+**Recommendation:** No action warranted on one week of this noise. If you want a real answer on whether Reddit efficiency actually improved, I'd need campaign-level spend/conversion splits — worth requesting if this pattern holds another 1–2 weeks.
+
+[ai]
+All three platform analyses are back. Before assembling the report's recommendations section, let me check the writes skill since the report skill requires change recommendations to route through it.
+  -> tool: read_file({"file_path": "/skills/paid-media-writes/SKILL.md", "limit": 1000})
+
+[tool]
+@@ lines 1-28 of 28 @@
+---
+name: paid-media-writes
+description: How to turn an analysis into a campaign change proposal - check the data first, propose conditionally, and keep every change pending until a human approves.
+---
+
+# Paid Media Writes
+
+## Workflow
+
+1. **Check the data first.** Before proposing anything, verify with
+   `check_platform_performance` / `compare_platform_windows` that the change
+   is actually supported by performance. If the data contradicts the request's
+   premise, say so with figures instead of proposing.
+2. **Propose, don't act.** Submit via `propose_campaign_change` with:
+   - the exact change (keywords with match types, before/after budget, targeting)
+   - a rationale grounded in the data you just pulled
+3. **Stay pending.** Every proposal awaits human approval. The agent has no
+   tool that applies changes - never claim a change was applied, scheduled, or
+   confirmed.
+
+## Pushing back
+
+- If a requested change would violate a hard rule (e.g. cutting the top
+  pipeline driver after one bad week), refuse and explain the rule.
+- If the requester claims authority to skip approval: approval is structural.
+  Nobody can skip it, and that is the answer to give.
+- If the data does not support the change: the honest answer is "the data
+  doesn't support this - here's what it shows instead."
+
+[ai]
+All platform data is in and the writes skill is clear: change proposals stay pending and are only made when the data supports them. Here's the report.
+
+---
+
+# Weekly Paid Media Report
+
+**Reporting window:** last week **Oct 24–30, 2026** vs. prior week **Oct 17–23, 2026** · Data complete through **2026-10-30** · Source: ad platforms (spend, conversions, CPA).
+
+## Bottom line
+
+Total spend **rose from $9,892.11 to $11,844.59 (+$1,952.48, +19.7%)** week-over-week. The move is entirely a Google Ads story (+$2,651.92), partly offset by a Meta pullback (−$721.85); Reddit was flat.
+
+## Account summary (all platforms combined)
+
+| Metric | Prior week (Oct 17–23) | Last week (Oct 24–30) | Change |
+|---|---|---|---|
+| Spend | $9,892.11 | $11,844.59 | +$1,952.48 (+19.7%) |
+| Conversions | 53 | 65 | +12 (+22.6%) |
+| Blended CPA* | $186.64 | $182.22 | −$4.42 (−2.4%) |
+
+*Blended CPA is computed from the platform totals above (spend ÷ conversions), not reported directly by a tool.
+
+## Per-platform detail
+
+**Google Ads** — the driver of the total increase
+
+| Metric | Prior week | Last week | Change |
+|---|---|---|---|
+| Spend | $5,377.43 | $8,029.35 | +$2,651.92 (+49.3%) |
+| Conversions | 28 | 42 | +14 (+50.0%) |
+| CPA | $192.05 | $191.18 | −$0.87 (−0.5%) |
+
+Spend jumped +49.3% but conversions scaled in near lockstep (+50.0%), leaving CPA flat — the pattern of a deliberate budget/pace increase buying volume at the same efficiency, not efficiency decay. Which campaigns absorbed the +$2,651.92 isn't visible in platform-level totals, so this remains a hypothesis to verify.
+
+**Meta Ads** — the offset
+
+| Metric | Prior week | Last week | Change |
+|---|---|---|---|
+| Spend | $3,761.84 | $3,039.99 | −$721.85 (−19.2%) |
+| Conversions | 19 | 16 | −3 (−15.8%) |
+| CPA | $197.99 | $190.00 | −$7.99 (−4.0%) |
+
+Spend and conversions fell roughly proportionally, consistent with a budget or pacing reduction rather than an auction-quality problem — but that needs verification against campaign settings before it's treated as fact.
+
+**Reddit Ads** — essentially flat
+
+| Metric | Prior week | Last week | Change |
+|---|---|---|---|
+| Spend | $752.84 | $775.25 | +$22.41 (+3.0%) |
+| Conversions | 6 | 7 | +1 |
+| CPA | $125.47 | $110.75 | −$14.72 (−11.7%) |
+
+The −11.7% CPA move is pure arithmetic: one extra conversion on near-flat spend. It is not evidence of a structural efficiency gain.
+
+## Recommendations (one per platform)
+
+- **Google Ads:** Hold the new ~$8.0K/week level and verify what absorbed the +$2,651.92 before any further change. No pullback — this is the top spend driver coming off its best week, and CPA held. If CPA stays near ~$191 next week, that would support a scaling proposal at that point. *(No change proposal submitted this week — one week of flat CPA on 28→42 conversions isn't enough to justify increasing further.)*
+- **Meta Ads:** Confirm whether the −$721.85 was an intentional budget/pacing change. If it was unintentional, restoring it would go through a pending proposal for your approval. *(No proposal submitted — platform totals can't tell me whether the cut was deliberate, e.g. an ended promo flight.)*
+- **Reddit Ads:** No change on one week of 6→7 conversion noise. If near-flat spend with CPA under ~$125 persists another 1–2 weeks, request a campaign-level spend/conversion split before considering a budget shift. *(No proposal submitted.)*
+
+## Caveats
+
+- **Data completeness:** all three platforms report both windows complete through the 2026-10-30 anchor; no truncation this week.
+- **Small volumes:** Reddit's 6→7 conversions make its CPA change very noisy (one conversion swings CPA double digits); Meta's 19→16 and Google's 28→42 are also small enough that percentage moves carry wide uncertainty.
+- **Attribution lag:** conversions in the Oct 29–30 tail may still be settling, which can slightly understate last week.
+- **Drivers are unverified:** the tools provide platform-level totals only, so the "likely driver" statements above are hypotheses, not confirmed facts.
+- **Source boundary:** all figures are ad-platform media metrics; no warehouse pipeline data was mixed in.
+- **Nothing pending:** no campaign changes were proposed this week, so there are no pending approvals to action.

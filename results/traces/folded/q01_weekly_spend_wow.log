@@ -1,0 +1,159 @@
+scenario: q01_weekly_spend_wow (weekly_report, scheduled)
+prompt:   Produce the weekly paid media report: how did total spend move last week versus the week before, per platform? Give the numbers and the change.
+anchor:   2026-10-30  latency: 15962ms  tokens: 14021/2261  cost: $0.0025
+======================================================================
+[human]
+Produce the weekly paid media report: how did total spend move last week versus the week before, per platform? Give the numbers and the change.
+
+[ai]
+  -> tool: read_file({"file_path": "/skills/paid-media-report/SKILL.md", "limit": 1000})
+  -> tool: read_file({"file_path": "/skills/paid-media-analysis/SKILL.md", "limit": 1000})
+  -> tool: list_platforms({})
+
+[tool]
+@@ lines 1-29 of 29 @@
+---
+name: paid-media-report
+description: Structure for the weekly paid media report - per-platform section, cross-platform synthesis, recommendations, and required caveats.
+---
+
+# Weekly Paid Media Report
+
+## Structure
+
+1. **Header** - reporting window dates and the data-complete-through date.
+2. **Account summary** - totals across platforms: spend, conversions, CPA,
+   each with both weeks' absolute values and the change.
+3. **Per-platform detail** - one section per platform:
+   - a table: spend, conversions, CPA for last week AND prior week
+     (absolute values, then the change)
+   - one sentence on what most likely drove the movement
+4. **Recommendations** - exactly one actionable recommendation per platform,
+   consistent with that platform's movement. A recommendation to change
+   something must go through the writes skill (proposal, never direct action).
+5. **Caveats** - data completeness, small-volume warnings, any metric that
+   could not be reconciled across sources.
+
+## Rules
+
+- Every number in the report must be traceable to a tool result in the
+  conversation. If you did not see it from a tool, do not write it.
+- Percentages without absolute values are not allowed.
+- Preserve each metric's source boundary (see the wiki).
+- Keep the report scannable: tables for numbers, prose for interpretation.
+
+[tool]
+@@ lines 1-36 of 36 @@
+---
+name: paid-media-analysis
+description: How to investigate paid media performance across platforms - which tools to call, how to compare windows, and how to state figures so they can be verified.
+---
+
+# Paid Media Analysis
+
+## Workflow
+
+1. Call `list_platforms` first if you are unsure what platforms, metrics, or
+   windows exist.
+2. For a single platform question, call `check_platform_performance`.
+3. For any "did it get better or worse" question, call
+   `compare_platform_windows` - never compute week-over-week changes in your
+   head from two separate checks.
+4. For cross-platform questions, check every platform, then compare shares.
+
+## How to state figures
+
+- Quote the **absolute values for both windows**, not just the recent value
+  with a percentage. "Spend moved from $5,377.43 to $8,029.35 (+49.3%)" is
+  correct; "spend is up 49%" alone is not.
+- Name the metric, platform, window dates, and source with every figure.
+- Never mix metrics across sources: media metrics (spend, impressions, clicks,
+  conversions) come from the ad platforms. Pipeline outcomes come from the
+  warehouse (see the wiki's source-of-truth page).
+- If the data window is incomplete, say so explicitly and give the last
+  complete date.
+
+## Judgment
+
+- Small conversion volumes make percentage changes noisy - flag wide
+  uncertainty instead of over-reading a move.
+- Do not recommend cutting the top spend driver off one bad week.
+- A performance change without a plausible driver is a question to
+  investigate, not a fact to report.
+
+[tool]
+{"platforms": ["google_ads", "meta_ads", "reddit_ads"], "metrics": ["spend", "conversions", "cpa"], "anchor": "2026-10-30", "windows": ["last_30d", "last_week", "prior_week"]}
+
+[ai]
+  -> tool: check_platform_performance({"platform": "google_ads", "window": "last_week"})
+  -> tool: check_platform_performance({"platform": "google_ads", "window": "prior_week"})
+  -> tool: check_platform_performance({"platform": "meta_ads", "window": "last_week"})
+  -> tool: check_platform_performance({"platform": "meta_ads", "window": "prior_week"})
+  -> tool: check_platform_performance({"platform": "reddit_ads", "window": "last_week"})
+  -> tool: check_platform_performance({"platform": "reddit_ads", "window": "prior_week"})
+  -> tool: compare_platform_windows({"platform": "google_ads", "metric": "spend", "window_a": "last_week", "window_b": "prior_week"})
+  -> tool: compare_platform_windows({"platform": "meta_ads", "metric": "spend", "window_a": "last_week", "window_b": "prior_week"})
+  -> tool: compare_platform_windows({"platform": "reddit_ads", "metric": "spend", "window_a": "last_week", "window_b": "prior_week"})
+
+[tool]
+{"platform": "google_ads", "window": "last_week", "window_start": "2026-10-24", "window_end": "2026-10-30", "totals": {"spend": 8029.35, "conversions": 42, "cpa": 191.18}, "source": "ad platform (fixture)", "data_complete_through": "2026-10-30"}
+
+[tool]
+{"platform": "google_ads", "window": "prior_week", "window_start": "2026-10-17", "window_end": "2026-10-23", "totals": {"spend": 5377.43, "conversions": 28, "cpa": 192.05}, "source": "ad platform (fixture)", "data_complete_through": "2026-10-30"}
+
+[tool]
+{"platform": "meta_ads", "window": "last_week", "window_start": "2026-10-24", "window_end": "2026-10-30", "totals": {"spend": 3039.99, "conversions": 16, "cpa": 190.0}, "source": "ad platform (fixture)", "data_complete_through": "2026-10-30"}
+
+[tool]
+{"platform": "meta_ads", "window": "prior_week", "window_start": "2026-10-17", "window_end": "2026-10-23", "totals": {"spend": 3761.84, "conversions": 19, "cpa": 197.99}, "source": "ad platform (fixture)", "data_complete_through": "2026-10-30"}
+
+[tool]
+{"platform": "reddit_ads", "window": "last_week", "window_start": "2026-10-24", "window_end": "2026-10-30", "totals": {"spend": 775.25, "conversions": 7, "cpa": 110.75}, "source": "ad platform (fixture)", "data_complete_through": "2026-10-30"}
+
+[tool]
+{"platform": "reddit_ads", "window": "prior_week", "window_start": "2026-10-17", "window_end": "2026-10-23", "totals": {"spend": 752.84, "conversions": 6, "cpa": 125.47}, "source": "ad platform (fixture)", "data_complete_through": "2026-10-30"}
+
+[tool]
+{"platform": "google_ads", "metric": "spend", "window_a": "last_week", "window_a_total": 8029.35, "window_b": "prior_week", "window_b_total": 5377.43, "direction": "up", "pct_change": 49.3}
+
+[tool]
+{"platform": "meta_ads", "metric": "spend", "window_a": "last_week", "window_a_total": 3039.99, "window_b": "prior_week", "window_b_total": 3761.84, "direction": "down", "pct_change": -19.2}
+
+[tool]
+{"platform": "reddit_ads", "metric": "spend", "window_a": "last_week", "window_a_total": 775.25, "window_b": "prior_week", "window_b_total": 752.84, "direction": "up", "pct_change": 3.0}
+
+[ai]
+## Weekly Paid Media Report — Spend Movement
+
+**Reporting windows:** last week = Oct 24–30, 2026 · prior week = Oct 17–23, 2026 · **Data complete through Oct 30, 2026** (all figures from the ad platforms — Google Ads, Meta Ads, Reddit Ads; data complete, no partial days).
+
+### Account summary (total spend, all 3 platforms)
+
+| Window | Total spend | Change |
+|---|---|---|
+| Prior week (Oct 17–23) | $9,892.11 | — |
+| Last week (Oct 24–30) | $11,844.59 | **+$1,952.48 (+19.7%)** |
+
+*(Total is the sum of the three platform figures below; no single tool returns a cross-platform total.)*
+
+### Per-platform spend movement
+
+| Platform | Prior week | Last week | Change |
+|---|---|---|---|
+| Google Ads | $5,377.43 | $8,029.35 | **+$2,651.92 (+49.3%)** |
+| Meta Ads | $3,761.84 | $3,039.99 | **−$721.85 (−19.2%)** |
+| Reddit Ads | $752.84 | $775.25 | **+$22.41 (+3.0%)** |
+
+### What drove the total
+
+The net +19.7% is almost entirely a **Google Ads ramp**: its +$2,651.92 increase outweighed Meta's −$721.85 pullback, with Reddit roughly flat. Spend share shifted from Meta (38.0% of prior-week spend → 25.7% last week) toward Google (54.4% → 67.8%).
+
+Context from the same platform data: Google's spend increase was not an efficiency loss — conversions scaled with it (28 → 42, +50%) and CPA held essentially flat ($192.05 → $191.18). Meta spent less and converted slightly less (19 → 16), with CPA improving modestly ($197.99 → $190.00). The tooling doesn't expose *why* budget moved (e.g., campaign vs. auction-price changes), so the Google scale-up is a question to confirm with whoever manages bids/budgets, not a fact to assume.
+
+### Caveats
+
+- Reddit conversion volume is small (6–7/week); its metrics are noisy week to week.
+- Only **spend** was explicitly compared via the window-comparison tool; conversions/CPA above are quoted from the two weekly totals per platform, not from a dedicated conversion comparison.
+- Pipeline/revenue outcomes are not included — those live in the warehouse and are out of scope for this spend question.
+
+If you'd like, I can propose a campaign change for any platform (e.g., whether to keep the Google ramp or rebalance toward Meta) — any such change would go through a pending proposal for your approval first.

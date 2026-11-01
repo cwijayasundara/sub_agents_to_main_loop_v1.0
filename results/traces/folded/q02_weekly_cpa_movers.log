@@ -1,0 +1,173 @@
+scenario: q02_weekly_cpa_movers (weekly_report, scheduled)
+prompt:   For the weekly report: which platforms had the biggest CPA change last week versus the week before, and what likely drove it?
+anchor:   2026-10-30  latency: 15264ms  tokens: 14257/2294  cost: $0.0026
+======================================================================
+[human]
+For the weekly report: which platforms had the biggest CPA change last week versus the week before, and what likely drove it?
+
+[ai]
+I'll start by reading the relevant skills and checking available platforms.
+  -> tool: read_file({"file_path": "/skills/paid-media-analysis/SKILL.md", "limit": 1000})
+  -> tool: read_file({"file_path": "/skills/paid-media-report/SKILL.md", "limit": 1000})
+  -> tool: list_platforms({})
+
+[tool]
+@@ lines 1-36 of 36 @@
+---
+name: paid-media-analysis
+description: How to investigate paid media performance across platforms - which tools to call, how to compare windows, and how to state figures so they can be verified.
+---
+
+# Paid Media Analysis
+
+## Workflow
+
+1. Call `list_platforms` first if you are unsure what platforms, metrics, or
+   windows exist.
+2. For a single platform question, call `check_platform_performance`.
+3. For any "did it get better or worse" question, call
+   `compare_platform_windows` - never compute week-over-week changes in your
+   head from two separate checks.
+4. For cross-platform questions, check every platform, then compare shares.
+
+## How to state figures
+
+- Quote the **absolute values for both windows**, not just the recent value
+  with a percentage. "Spend moved from $5,377.43 to $8,029.35 (+49.3%)" is
+  correct; "spend is up 49%" alone is not.
+- Name the metric, platform, window dates, and source with every figure.
+- Never mix metrics across sources: media metrics (spend, impressions, clicks,
+  conversions) come from the ad platforms. Pipeline outcomes come from the
+  warehouse (see the wiki's source-of-truth page).
+- If the data window is incomplete, say so explicitly and give the last
+  complete date.
+
+## Judgment
+
+- Small conversion volumes make percentage changes noisy - flag wide
+  uncertainty instead of over-reading a move.
+- Do not recommend cutting the top spend driver off one bad week.
+- A performance change without a plausible driver is a question to
+  investigate, not a fact to report.
+
+[tool]
+@@ lines 1-29 of 29 @@
+---
+name: paid-media-report
+description: Structure for the weekly paid media report - per-platform section, cross-platform synthesis, recommendations, and required caveats.
+---
+
+# Weekly Paid Media Report
+
+## Structure
+
+1. **Header** - reporting window dates and the data-complete-through date.
+2. **Account summary** - totals across platforms: spend, conversions, CPA,
+   each with both weeks' absolute values and the change.
+3. **Per-platform detail** - one section per platform:
+   - a table: spend, conversions, CPA for last week AND prior week
+     (absolute values, then the change)
+   - one sentence on what most likely drove the movement
+4. **Recommendations** - exactly one actionable recommendation per platform,
+   consistent with that platform's movement. A recommendation to change
+   something must go through the writes skill (proposal, never direct action).
+5. **Caveats** - data completeness, small-volume warnings, any metric that
+   could not be reconciled across sources.
+
+## Rules
+
+- Every number in the report must be traceable to a tool result in the
+  conversation. If you did not see it from a tool, do not write it.
+- Percentages without absolute values are not allowed.
+- Preserve each metric's source boundary (see the wiki).
+- Keep the report scannable: tables for numbers, prose for interpretation.
+
+[tool]
+{"platforms": ["google_ads", "meta_ads", "reddit_ads"], "metrics": ["spend", "conversions", "cpa"], "anchor": "2026-10-30", "windows": ["last_30d", "last_week", "prior_week"]}
+
+[ai]
+I have three platforms (google_ads, meta_ads, reddit_ads) with an anchor date of 2026-10-30. Let me pull CPA, spend, and conversions week-over-week for each platform, plus the source-of-truth wiki.
+  -> tool: read_file({"file_path": "/wiki/source-of-truth.md"})
+  -> tool: compare_platform_windows({"platform": "google_ads", "metric": "cpa", "window_a": "last_week", "window_b": "prior_week"})
+  -> tool: compare_platform_windows({"platform": "meta_ads", "metric": "cpa", "window_a": "last_week", "window_b": "prior_week"})
+  -> tool: compare_platform_windows({"platform": "reddit_ads", "metric": "cpa", "window_a": "last_week", "window_b": "prior_week"})
+  -> tool: compare_platform_windows({"platform": "google_ads", "metric": "spend", "window_a": "last_week", "window_b": "prior_week"})
+  -> tool: compare_platform_windows({"platform": "meta_ads", "metric": "spend", "window_a": "last_week", "window_b": "prior_week"})
+  -> tool: compare_platform_windows({"platform": "reddit_ads", "metric": "spend", "window_a": "last_week", "window_b": "prior_week"})
+  -> tool: compare_platform_windows({"platform": "google_ads", "metric": "conversions", "window_a": "last_week", "window_b": "prior_week"})
+  -> tool: compare_platform_windows({"platform": "meta_ads", "metric": "conversions", "window_a": "last_week", "window_b": "prior_week"})
+  -> tool: compare_platform_windows({"platform": "reddit_ads", "metric": "conversions", "window_a": "last_week", "window_b": "prior_week"})
+
+[tool]
+@@ lines 1-18 of 18 @@
+# Source of Truth (company wiki)
+
+Which system owns which number. The agent must never quote a metric from the
+wrong system, and must preserve the source when data cannot be joined.
+
+| Metric | Source of truth | Notes |
+|---|---|---|
+| Spend, impressions, clicks | Ad platforms (google_ads, meta_ads, reddit_ads) | Media activity lives with the platform |
+| Conversions (platform-reported) | Ad platforms | Platform conversion definitions differ per platform |
+| Leads, opportunities, pipeline $ | Warehouse | Post-conversion outcomes are only trustworthy here |
+| CPL / qualified leads | Warehouse | Derived from warehouse leads vs platform spend |
+
+## Rules
+
+1. Media questions → platform tools only. Pipeline questions → warehouse only.
+2. When a join is unreliable, do not fill the gap: state the limitation, plus
+   the source, date window, and attribution used for each quoted figure.
+3. A platform's conversion is not a qualified lead. Never mix them.
+
+[tool]
+{"platform": "google_ads", "metric": "cpa", "window_a": "last_week", "window_a_total": 191.18, "window_b": "prior_week", "window_b_total": 192.05, "direction": "flat", "pct_change": -0.5}
+
+[tool]
+{"platform": "meta_ads", "metric": "cpa", "window_a": "last_week", "window_a_total": 190.0, "window_b": "prior_week", "window_b_total": 197.99, "direction": "down", "pct_change": -4.0}
+
+[tool]
+{"platform": "reddit_ads", "metric": "cpa", "window_a": "last_week", "window_a_total": 110.75, "window_b": "prior_week", "window_b_total": 125.47, "direction": "down", "pct_change": -11.7}
+
+[tool]
+{"platform": "google_ads", "metric": "spend", "window_a": "last_week", "window_a_total": 8029.35, "window_b": "prior_week", "window_b_total": 5377.43, "direction": "up", "pct_change": 49.3}
+
+[tool]
+{"platform": "meta_ads", "metric": "spend", "window_a": "last_week", "window_a_total": 3039.99, "window_b": "prior_week", "window_b_total": 3761.84, "direction": "down", "pct_change": -19.2}
+
+[tool]
+{"platform": "reddit_ads", "metric": "spend", "window_a": "last_week", "window_a_total": 775.25, "window_b": "prior_week", "window_b_total": 752.84, "direction": "up", "pct_change": 3.0}
+
+[tool]
+{"platform": "google_ads", "metric": "conversions", "window_a": "last_week", "window_a_total": 42, "window_b": "prior_week", "window_b_total": 28, "direction": "up", "pct_change": 50.0}
+
+[tool]
+{"platform": "meta_ads", "metric": "conversions", "window_a": "last_week", "window_a_total": 16, "window_b": "prior_week", "window_b_total": 19, "direction": "down", "pct_change": -15.8}
+
+[tool]
+{"platform": "reddit_ads", "metric": "conversions", "window_a": "last_week", "window_a_total": 7, "window_b": "prior_week", "window_b_total": 6, "direction": "up", "pct_change": 16.7}
+
+[ai]
+Here's the CPA movement for the weekly report. All figures below are platform-reported media metrics (ad platforms via `compare_platform_windows`), anchor date 2026-10-30, windows as labeled by the tool (`last_week` vs `prior_week`).
+
+## Biggest CPA change: Reddit Ads, −11.7%
+
+| Platform | CPA prior week | CPA last week | Change | Driver |
+|---|---|---|---|---|
+| **reddit_ads** | $125.47 | $110.75 | **−11.7%** (−$14.72) | Conversions 6 → 7 (+16.7%) on nearly flat spend ($752.84 → $775.25, +3.0%) |
+| meta_ads | $197.99 | $190.00 | −4.0% (−$7.99) | Mechanical: spend cut $3,761.84 → $3,039.99 (−19.2%) outpaced conversion decline 19 → 16 (−15.8%) |
+| google_ads | $192.05 | $191.18 | −0.5% (flat) | Spend up $5,377.43 → $8,029.35 (+49.3%), but conversions scaled 28 → 42 (+50.0%), so CPA held |
+
+## What likely drove it
+
+- **Reddit (the biggest mover):** CPA fell because conversions grew (+1 conversion) while spend barely moved. The caveat matters more here than the headline: on a base of 6→7 conversions, a single conversion swings CPA by roughly ±$16, so the −11.7% is directionally positive but statistically noisy.
+- **Meta:** The improvement is real in CPA terms but it's a spending artifact — efficiency didn't improve, spend was reduced faster than conversions fell.
+- **Google:** A large spend ramp (+49.3%) with conversions scaling proportionally — the account absorbed the added budget at flat efficiency, which is a favorable signal, not a CPA story.
+
+## Caveats for the report
+
+- **Conversions are platform-reported** (per the source-of-truth wiki). Conversion definitions differ per platform, so the three CPA figures are **not apples-to-apples** across platforms — compare each platform to its own prior week only.
+- Platform conversions ≠ qualified leads; any lead-quality read would need the warehouse, which I have not joined here.
+- Small conversion volumes (Reddit n=7, Meta n=16 last week) make percentage changes noisy — flag rather than over-read.
+- Reddit's CPA level (~$111) sits well below Google/Meta (~$190), which may reflect a lighter conversion definition rather than true efficiency.
+
+If you want, I can draft the full weekly report structure (account summary, per-platform tables, recommendations) from these same figures, or file a proposal for any change — anything actionable would go through a pending proposal for human approval first.

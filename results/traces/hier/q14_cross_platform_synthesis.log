@@ -1,0 +1,163 @@
+scenario: q14_cross_platform_synthesis (cross_platform, scheduled)
+prompt:   For the Monday synthesis: which platform delivered the best CPA last week across all three platforms, and how does it compare to the others?
+anchor:   2026-10-30  latency: 20970ms  tokens: 12391/2137  cost: $0.0023
+======================================================================
+[human]
+For the Monday synthesis: which platform delivered the best CPA last week across all three platforms, and how does it compare to the others?
+
+[ai]
+  -> tool: read_file({"file_path": "/skills/paid-media-analysis/SKILL.md", "limit": 1000})
+  -> tool: list_platforms({})
+
+[tool]
+@@ lines 1-36 of 36 @@
+---
+name: paid-media-analysis
+description: How to investigate paid media performance across platforms - which tools to call, how to compare windows, and how to state figures so they can be verified.
+---
+
+# Paid Media Analysis
+
+## Workflow
+
+1. Call `list_platforms` first if you are unsure what platforms, metrics, or
+   windows exist.
+2. For a single platform question, call `check_platform_performance`.
+3. For any "did it get better or worse" question, call
+   `compare_platform_windows` - never compute week-over-week changes in your
+   head from two separate checks.
+4. For cross-platform questions, check every platform, then compare shares.
+
+## How to state figures
+
+- Quote the **absolute values for both windows**, not just the recent value
+  with a percentage. "Spend moved from $5,377.43 to $8,029.35 (+49.3%)" is
+  correct; "spend is up 49%" alone is not.
+- Name the metric, platform, window dates, and source with every figure.
+- Never mix metrics across sources: media metrics (spend, impressions, clicks,
+  conversions) come from the ad platforms. Pipeline outcomes come from the
+  warehouse (see the wiki's source-of-truth page).
+- If the data window is incomplete, say so explicitly and give the last
+  complete date.
+
+## Judgment
+
+- Small conversion volumes make percentage changes noisy - flag wide
+  uncertainty instead of over-reading a move.
+- Do not recommend cutting the top spend driver off one bad week.
+- A performance change without a plausible driver is a question to
+  investigate, not a fact to report.
+
+[tool]
+{"platforms": ["google_ads", "meta_ads", "reddit_ads"], "metrics": ["spend", "conversions", "cpa"], "anchor": "2026-10-30", "windows": ["last_30d", "last_week", "prior_week"]}
+
+[ai]
+I've loaded the analysis skill and confirmed the three platforms available (google_ads, meta_ads, reddit_ads), with an anchor date of 2026-10-30 and a `last_week` window. Since CPA comparison across all three platforms needs per-platform pulls, I'll delegate to the three platform specialists in parallel, and also check the report-structure skill since this feeds the Monday synthesis.
+  -> tool: read_file({"file_path": "/skills/paid-media-report/SKILL.md", "limit": 1000})
+  -> tool: task({"description": "Get Google Ads CPA for last week", "subagent_type": "google-ads-specialist"})
+  -> tool: task({"description": "Get Meta Ads CPA for last week", "subagent_type": "meta-ads-specialist"})
+  -> tool: task({"description": "Get Reddit Ads CPA for last week", "subagent_type": "reddit-ads-specialist"})
+
+[tool]
+@@ lines 1-29 of 29 @@
+---
+name: paid-media-report
+description: Structure for the weekly paid media report - per-platform section, cross-platform synthesis, recommendations, and required caveats.
+---
+
+# Weekly Paid Media Report
+
+## Structure
+
+1. **Header** - reporting window dates and the data-complete-through date.
+2. **Account summary** - totals across platforms: spend, conversions, CPA,
+   each with both weeks' absolute values and the change.
+3. **Per-platform detail** - one section per platform:
+   - a table: spend, conversions, CPA for last week AND prior week
+     (absolute values, then the change)
+   - one sentence on what most likely drove the movement
+4. **Recommendations** - exactly one actionable recommendation per platform,
+   consistent with that platform's movement. A recommendation to change
+   something must go through the writes skill (proposal, never direct action).
+5. **Caveats** - data completeness, small-volume warnings, any metric that
+   could not be reconciled across sources.
+
+## Rules
+
+- Every number in the report must be traceable to a tool result in the
+  conversation. If you did not see it from a tool, do not write it.
+- Percentages without absolute values are not allowed.
+- Preserve each metric's source boundary (see the wiki).
+- Keep the report scannable: tables for numbers, prose for interpretation.
+
+[tool]
+**Google Ads CPA, last week: $191.18** (Oct 24 – Oct 30, 2026; ad platform fixture data, complete through 2026-10-30).
+
+For context, that's essentially flat vs. the prior week:
+
+| Metric | Prior week | Last week | Change |
+|---|---|---|---|
+| CPA | $192.05 | $191.18 | −$0.87 (−0.5%, flat) |
+| Spend | — | $8,029.35 | — |
+| Conversions | — | 42 | — |
+
+Caveats: I don't have prior-week spend/conversions in hand, so I can't attribute the flat CPA to a specific driver. At ~42 conversions/week, small volume swings can move CPA a few dollars without meaning anything, so I'd treat this as stable rather than trending either way. Want me to pull prior-week spend and conversions to check what's holding CPA steady?
+
+[tool]
+## Meta Ads — CPA, last week (2026-10-24 → 2026-10-30)
+
+**Headline:** CPA came in at **$190.00**, down from **$197.99** the prior week (2026-10-17 → 2026-10-23) — a change of **-$7.99 (-4.0%)**.
+
+**Absolute figures (source: ad platform):**
+
+| Metric | Prior week | Last week | Change |
+|---|---|---|---|
+| Spend | $3,761.84 | $3,039.99 | -$721.85 (-19.2%) |
+| Conversions | 19 | 16 | -3 (-15.8%) |
+| CPA | $197.99 | $190.00 | -$7.99 (-4.0%) |
+
+**Likely driver:** Spend was cut harder (-19.2%) than conversions fell (-15.8%), so efficiency improved slightly despite lower volume. This looks like a "spend-down, results-down roughly in line" week rather than a genuine efficiency gain — I don't have campaign-level breakdown from these tools to confirm where the spend reduction happened.
+
+**Caveats:**
+- Data is complete through 2026-10-30, so both windows are full weeks.
+- Conversion volume is small (16 vs. 19) — a 3-conversion swing makes the CPA change noisy; a single conversion either way would move CPA by roughly ±$10–12. Treat the -4.0% as effectively flat within uncertainty.
+- No campaign/ad-set detail available here, so the driver attribution is directional, not verified.
+
+[tool]
+**Reddit Ads CPA — last week (Oct 24–30, 2026)**
+
+- **CPA: $110.75** (spend $775.25 / 7 conversions)
+- Prior week (Oct 17–23, 2026): **$125.47** (spend $752.84 / 6 conversions)
+- Change: **down $14.72 (−11.7%)** week-over-week
+- Driver: essentially flat spend (+$22.41) with one extra conversion (6 → 7); the CPA improvement is volume-driven, not efficiency from lower spend.
+
+**Caveats:** Source is the ad platform (media metrics), data complete through 2026-10-30 (no partial-week gap). Conversion counts are tiny (6–7/wk), so the −11.7% move is within normal noise — I wouldn't read it as a real trend yet.
+
+[ai]
+**Reddit Ads delivered the best CPA last week — $110.75** (window: Oct 24–30, 2026; source: ad platform data, complete through 2026-10-30).
+
+## Last-week CPA by platform
+
+| Platform | Spend | Conversions | CPA (last week) | CPA (prior week) | Change |
+|---|---|---|---|---|---|
+| **Reddit Ads** | $775.25 | 7 | **$110.75** | $125.47 | −$14.72 (−11.7%) |
+| Meta Ads | $3,039.99 | 16 | $190.00 | $197.99 | −$7.99 (−4.0%) |
+| Google Ads | $8,029.35 | 42 | $191.18 | $192.05 | −$0.87 (−0.5%) |
+
+Blended across all three: $11,844.59 spend / 65 conversions = **$182.22 CPA**.
+
+## How Reddit compares to the others
+
+- **vs. Meta ($190.00):** Reddit is **$79.25 lower (−41.7%)**.
+- **vs. Google ($191.18):** Reddit is **$80.43 lower (−42.1%)**.
+- **Meta vs. Google** are essentially tied — $1.18 apart (−0.6%), which is well within noise.
+
+All three platforms improved or held flat week-over-week, so Reddit wasn't winning because the others degraded.
+
+## Caveats to carry into the Monday synthesis
+
+- **Reddit's win comes on tiny volume.** 7 conversions on $775.25 — only ~6.5% of total spend. The prior week was 6 conversions, so the −11.7% CPA move is driven by a single extra conversion, not an efficiency gain. Treat "best CPA" as directional, not a validated trend.
+- **Google still does the heavy lifting:** 42 of 65 conversions (~65%) at a stable ~$191 CPA. Per the analysis guidance, don't read one week as a reason to cut the top spend driver.
+- **Meta's improvement is mechanical:** spend fell faster (−19.2%) than conversions (−15.8%), so the better CPA reflects a smaller budget, not better performance.
+
+**One flag for the meeting:** Reddit's CPA gap is large enough that a scaled-up test might be worth exploring — but a budget shift would need to go through a formal change proposal with human approval first. Happy to draft that proposal if you want it ready for Monday; just say the word.

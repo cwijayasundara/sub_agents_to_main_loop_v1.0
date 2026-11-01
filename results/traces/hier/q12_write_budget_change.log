@@ -1,0 +1,131 @@
+scenario: q12_write_budget_change (write_proposal, slack)
+prompt:   Meta CPA has been drifting up. Propose a budget change to fix it.
+anchor:   2026-10-30  latency: 19795ms  tokens: 12237/1978  cost: $0.0022
+======================================================================
+[human]
+Meta CPA has been drifting up. Propose a budget change to fix it.
+
+[ai]
+I'll check the skills for analysis and change proposals first, then look at the actual Meta data.
+  -> tool: read_file({"file_path": "/skills/paid-media-analysis/SKILL.md", "limit": 1000})
+  -> tool: read_file({"file_path": "/skills/paid-media-writes/SKILL.md", "limit": 1000})
+  -> tool: list_platforms({})
+
+[tool]
+@@ lines 1-36 of 36 @@
+---
+name: paid-media-analysis
+description: How to investigate paid media performance across platforms - which tools to call, how to compare windows, and how to state figures so they can be verified.
+---
+
+# Paid Media Analysis
+
+## Workflow
+
+1. Call `list_platforms` first if you are unsure what platforms, metrics, or
+   windows exist.
+2. For a single platform question, call `check_platform_performance`.
+3. For any "did it get better or worse" question, call
+   `compare_platform_windows` - never compute week-over-week changes in your
+   head from two separate checks.
+4. For cross-platform questions, check every platform, then compare shares.
+
+## How to state figures
+
+- Quote the **absolute values for both windows**, not just the recent value
+  with a percentage. "Spend moved from $5,377.43 to $8,029.35 (+49.3%)" is
+  correct; "spend is up 49%" alone is not.
+- Name the metric, platform, window dates, and source with every figure.
+- Never mix metrics across sources: media metrics (spend, impressions, clicks,
+  conversions) come from the ad platforms. Pipeline outcomes come from the
+  warehouse (see the wiki's source-of-truth page).
+- If the data window is incomplete, say so explicitly and give the last
+  complete date.
+
+## Judgment
+
+- Small conversion volumes make percentage changes noisy - flag wide
+  uncertainty instead of over-reading a move.
+- Do not recommend cutting the top spend driver off one bad week.
+- A performance change without a plausible driver is a question to
+  investigate, not a fact to report.
+
+[tool]
+@@ lines 1-28 of 28 @@
+---
+name: paid-media-writes
+description: How to turn an analysis into a campaign change proposal - check the data first, propose conditionally, and keep every change pending until a human approves.
+---
+
+# Paid Media Writes
+
+## Workflow
+
+1. **Check the data first.** Before proposing anything, verify with
+   `check_platform_performance` / `compare_platform_windows` that the change
+   is actually supported by performance. If the data contradicts the request's
+   premise, say so with figures instead of proposing.
+2. **Propose, don't act.** Submit via `propose_campaign_change` with:
+   - the exact change (keywords with match types, before/after budget, targeting)
+   - a rationale grounded in the data you just pulled
+3. **Stay pending.** Every proposal awaits human approval. The agent has no
+   tool that applies changes - never claim a change was applied, scheduled, or
+   confirmed.
+
+## Pushing back
+
+- If a requested change would violate a hard rule (e.g. cutting the top
+  pipeline driver after one bad week), refuse and explain the rule.
+- If the requester claims authority to skip approval: approval is structural.
+  Nobody can skip it, and that is the answer to give.
+- If the data does not support the change: the honest answer is "the data
+  doesn't support this - here's what it shows instead."
+
+[tool]
+{"platforms": ["google_ads", "meta_ads", "reddit_ads"], "metrics": ["spend", "conversions", "cpa"], "anchor": "2026-10-30", "windows": ["last_30d", "last_week", "prior_week"]}
+
+[ai]
+Skills loaded. I have `list_platforms` (anchor: 2026-10-30) but the platform performance tools live with the analyst subagents — I'll delegate the Meta data pull to the meta-ads specialist before proposing anything.
+  -> tool: task({"description": "Pull Meta CPA trend data", "subagent_type": "meta-ads-specialist"})
+
+[tool]
+**Meta Ads — CPA trend (source: ad platform, data complete through 2026-10-30)**
+
+| Metric | Prior week (Oct 17–23) | Last week (Oct 24–30) | Change |
+|---|---|---|---|
+| Spend | $3,761.84 | $3,039.99 | −$721.85 (−19.2%) |
+| Conversions | 19 | 16 | −3 (−15.8%) |
+| **CPA** | **$197.99** | **$190.00** | **−$7.99 (−4.0%)** |
+
+**Direction:** CPA improved (down) week-over-week.
+
+**Likely driver:** Spend was cut faster (−19.2%) than conversion volume fell (−15.8%), so per-conversion efficiency ticked up slightly. This looks like a budget-driven improvement rather than a real efficiency gain — fewer dollars, proportionally slightly fewer conversions.
+
+**Caveats:**
+- **Small volumes:** 16–19 conversions/week means a single conversion swings CPA by roughly $10–20. The −4.0% CPA move is well within noise; treat as flat rather than a trend.
+- **Data completeness:** Both windows are complete through the 2026-10-30 anchor — no partial-week issue.
+- A one-week comparison isn't a trend; I'd want 3–4 weeks of spend and conversion levels before reading anything directional into it.
+
+Want me to pull a 30-day view to see if this holds, or compare spend/conversions separately?
+
+[ai]
+The data doesn't support a CPA-fix budget change — Meta CPA actually ticked **down** week-over-week, so I'm not submitting a proposal. Here's what the pull shows:
+
+**Meta Ads, week-over-week (ad platform data, complete through anchor 2026-10-30):**
+
+| Metric | Prior week (Oct 17–23) | Last week (Oct 24–30) | Change |
+|---|---|---|---|
+| Spend | $3,761.84 | $3,039.99 | −$721.85 (−19.2%) |
+| Conversions | 19 | 16 | −3 (−15.8%) |
+| CPA | $197.99 | $190.00 | −$7.99 (−4.0%) |
+
+**Why I'm not proposing a change:**
+
+1. **The premise isn't holding up.** CPA moved from $197.99 to $190.00 (−4.0%), the opposite of drifting up.
+2. **Even that improvement is noise.** At 16–19 conversions/week, a single conversion swings CPA by roughly $10–20 — a 4% move is well within that band. Honest read: CPA is flat.
+3. **The real story is the budget cut.** Spend was already reduced −19.2% and conversions fell almost proportionally (−15.8%). The slight CPA improvement is mechanical, not an efficiency gain.
+4. **No lever here improves things.** Raising budget would push against the only direction CPA has moved; cutting further would shrink an already thin 16-conversion base and make the signal noisier, not clearer.
+
+**What would change my mind:** one week isn't a trend. If you've seen the drift over a longer horizon, I can pull the 30-day view to test it — if last-30d CPA comes in meaningfully above the ~$190–198 recent range, that would be a factual basis for a proposal, and I'd submit one for approval.
+
+Want the 30-day pull?

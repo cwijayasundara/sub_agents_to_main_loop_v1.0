@@ -56,6 +56,21 @@ def extract_usage(messages: list) -> dict[str, int]:
     return usage
 
 
+def serialize_messages(messages: list) -> list[dict]:
+    """Message list -> JSON-safe dicts for trace logs."""
+    out = []
+    for m in messages:
+        entry: dict = {"role": m.type, "content": m.content if isinstance(m.content, str) else str(m.content)}
+        if m.type == "ai" and m.tool_calls:
+            entry["tool_calls"] = [
+                {"name": c["name"], "args": c.get("args", {})} for c in m.tool_calls
+            ]
+        if m.type == "tool":
+            entry["tool_call_id"] = getattr(m, "tool_call_id", None)
+        out.append(entry)
+    return out
+
+
 class FireworksAgentUnderTest:
     """AgentUnderTest implementation.
 
@@ -157,4 +172,5 @@ class FireworksAgentUnderTest:
             cost_usd=estimate_cost_usd(usage["input_tokens"], usage["output_tokens"]),
             latency_ms=latency_ms,
             selections=self._selections(),
+            trace=serialize_messages(messages),
         )

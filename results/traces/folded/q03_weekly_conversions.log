@@ -1,0 +1,147 @@
+scenario: q03_weekly_conversions (weekly_report, scheduled)
+prompt:   Weekly report section: total conversions per platform last week versus the prior week.
+anchor:   2026-10-30  latency: 9053ms  tokens: 18459/1234  cost: $0.0025
+======================================================================
+[human]
+Weekly report section: total conversions per platform last week versus the prior week.
+
+[ai]
+  -> tool: read_file({"file_path": "/skills/paid-media-report/SKILL.md", "limit": 1000})
+  -> tool: read_file({"file_path": "/skills/paid-media-analysis/SKILL.md", "limit": 1000})
+  -> tool: list_platforms({})
+
+[tool]
+@@ lines 1-29 of 29 @@
+---
+name: paid-media-report
+description: Structure for the weekly paid media report - per-platform section, cross-platform synthesis, recommendations, and required caveats.
+---
+
+# Weekly Paid Media Report
+
+## Structure
+
+1. **Header** - reporting window dates and the data-complete-through date.
+2. **Account summary** - totals across platforms: spend, conversions, CPA,
+   each with both weeks' absolute values and the change.
+3. **Per-platform detail** - one section per platform:
+   - a table: spend, conversions, CPA for last week AND prior week
+     (absolute values, then the change)
+   - one sentence on what most likely drove the movement
+4. **Recommendations** - exactly one actionable recommendation per platform,
+   consistent with that platform's movement. A recommendation to change
+   something must go through the writes skill (proposal, never direct action).
+5. **Caveats** - data completeness, small-volume warnings, any metric that
+   could not be reconciled across sources.
+
+## Rules
+
+- Every number in the report must be traceable to a tool result in the
+  conversation. If you did not see it from a tool, do not write it.
+- Percentages without absolute values are not allowed.
+- Preserve each metric's source boundary (see the wiki).
+- Keep the report scannable: tables for numbers, prose for interpretation.
+
+[tool]
+@@ lines 1-36 of 36 @@
+---
+name: paid-media-analysis
+description: How to investigate paid media performance across platforms - which tools to call, how to compare windows, and how to state figures so they can be verified.
+---
+
+# Paid Media Analysis
+
+## Workflow
+
+1. Call `list_platforms` first if you are unsure what platforms, metrics, or
+   windows exist.
+2. For a single platform question, call `check_platform_performance`.
+3. For any "did it get better or worse" question, call
+   `compare_platform_windows` - never compute week-over-week changes in your
+   head from two separate checks.
+4. For cross-platform questions, check every platform, then compare shares.
+
+## How to state figures
+
+- Quote the **absolute values for both windows**, not just the recent value
+  with a percentage. "Spend moved from $5,377.43 to $8,029.35 (+49.3%)" is
+  correct; "spend is up 49%" alone is not.
+- Name the metric, platform, window dates, and source with every figure.
+- Never mix metrics across sources: media metrics (spend, impressions, clicks,
+  conversions) come from the ad platforms. Pipeline outcomes come from the
+  warehouse (see the wiki's source-of-truth page).
+- If the data window is incomplete, say so explicitly and give the last
+  complete date.
+
+## Judgment
+
+- Small conversion volumes make percentage changes noisy - flag wide
+  uncertainty instead of over-reading a move.
+- Do not recommend cutting the top spend driver off one bad week.
+- A performance change without a plausible driver is a question to
+  investigate, not a fact to report.
+
+[tool]
+{"platforms": ["google_ads", "meta_ads", "reddit_ads"], "metrics": ["spend", "conversions", "cpa"], "anchor": "2026-10-30", "windows": ["last_30d", "last_week", "prior_week"]}
+
+[ai]
+I'll pull the week-over-week conversion comparisons for all three platforms from the ad platforms.
+  -> tool: compare_platform_windows({"platform": "google_ads", "metric": "conversions", "window_a": "last_week", "window_b": "prior_week"})
+  -> tool: compare_platform_windows({"platform": "meta_ads", "metric": "conversions", "window_a": "last_week", "window_b": "prior_week"})
+  -> tool: compare_platform_windows({"platform": "reddit_ads", "metric": "conversions", "window_a": "last_week", "window_b": "prior_week"})
+
+[tool]
+{"platform": "google_ads", "metric": "conversions", "window_a": "last_week", "window_a_total": 42, "window_b": "prior_week", "window_b_total": 28, "direction": "up", "pct_change": 50.0}
+
+[tool]
+{"platform": "meta_ads", "metric": "conversions", "window_a": "last_week", "window_a_total": 16, "window_b": "prior_week", "window_b_total": 19, "direction": "down", "pct_change": -15.8}
+
+[tool]
+{"platform": "reddit_ads", "metric": "conversions", "window_a": "last_week", "window_a_total": 7, "window_b": "prior_week", "window_b_total": 6, "direction": "up", "pct_change": 16.7}
+
+[ai]
+  -> tool: read_file({"file_path": "/wiki/source-of-truth.md", "limit": 100})
+
+[tool]
+@@ lines 1-18 of 18 @@
+# Source of Truth (company wiki)
+
+Which system owns which number. The agent must never quote a metric from the
+wrong system, and must preserve the source when data cannot be joined.
+
+| Metric | Source of truth | Notes |
+|---|---|---|
+| Spend, impressions, clicks | Ad platforms (google_ads, meta_ads, reddit_ads) | Media activity lives with the platform |
+| Conversions (platform-reported) | Ad platforms | Platform conversion definitions differ per platform |
+| Leads, opportunities, pipeline $ | Warehouse | Post-conversion outcomes are only trustworthy here |
+| CPL / qualified leads | Warehouse | Derived from warehouse leads vs platform spend |
+
+## Rules
+
+1. Media questions → platform tools only. Pipeline questions → warehouse only.
+2. When a join is unreliable, do not fill the gap: state the limitation, plus
+   the source, date window, and attribution used for each quoted figure.
+3. A platform's conversion is not a qualified lead. Never mix them.
+
+[ai]
+## Weekly Report — Conversions by Platform (Week over Week)
+
+**Window:** last week vs. prior week (data anchor 2026-10-30) · **Source:** platform-reported conversions from each ad platform (ad platform tools, `compare_platform_windows`)
+
+| Platform | Prior Week | Last Week | Change |
+|---|---|---|---|
+| Google Ads | 28 | 42 | +14 conversions (+50.0%) |
+| Meta Ads | 19 | 16 | −3 conversions (−15.8%) |
+| Reddit Ads | 6 | 7 | +1 conversion (+16.7%) |
+| **Total (all platforms)** | **53** | **65** | **+12 conversions (+22.6%)** |
+
+**Notes on the movers:**
+- **Google Ads** drove essentially all of the net gain (+14 of +12). At 42 conversions, volume is large enough that the +50% is a meaningful signal, not noise.
+- **Meta Ads** was the only decliner (−15.8%). Direction is clear but the driver is unknown from conversion counts alone — worth a spend/CPA pull before characterizing it as deterioration.
+- **Reddit Ads** moved +1 on a very small base (6 → 7); percentage moves at this volume are noisy, so treat the +16.7% as directional only.
+
+**Caveats:**
+- These are **platform-reported conversions**; conversion definitions differ per platform, so cross-platform totals are a sum of unlike definitions and are shown for scale only. Platform conversions are not qualified leads (qualified-lead metrics live in the warehouse and are out of scope for this section).
+- Conversion figures here only; spend/CPA context not yet pulled for this section — say the word and I'll add them.
+
+**Recommendation (pending, needs approval):** none yet — I'd pull Google Ads spend/CPA and Meta spend/CPA for both weeks first to confirm whether Meta's conversion dip came with efficient spend (a value question) or rising CPA (a real problem) before proposing any campaign change. Want me to run that follow-up?
