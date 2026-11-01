@@ -88,3 +88,23 @@ Run: `fw-skills.jsonl` / `fw-skills-graded.json` / `fw-skills-compare.json`
   `workspace/wiki/` (source-of-truth, campaign-goals) served through the
   deepagents filesystem backend with skills listed in the system prompt only
   by name+description until read.
+
+## Stage 4 addendum — approval workflow (analysis → action)
+
+The PMA contract, in-process: `ProposalStore` + `approval_cli` (list/approve/apply).
+
+Live demo (q11, real model + skills):
+1. Agent proposed keywords → `prop-*.json` persisted, `pending`.
+2. `approve --approver U999` (not on allowlist) → **refused, proposal stayed pending**.
+3. With allowlist absent, even a valid ID was refused — **fail closed** by default.
+4. `approve --approver U123` → `apply` → mutation in the ledger, **verified** by read-back.
+5. Apply-twice and apply-before-approve are both refused (idempotency/order guards).
+
+Findings:
+- **Emergent behavior worth keeping:** on a repeat run the agent found its own
+  earlier duplicate proposals in the store and asked the reviewer to approve
+  one and reject the rest — self-caught duplication. A store-level dedupe
+  (same platform+change_type+details while pending) is the follow-up.
+- The gate is structural: `apply` lives only in the CLI/server layer; the
+  agent's tool surface has no path to it. Prompt-injection attempts (q13)
+  cannot cross it because there is nothing to cross into.
