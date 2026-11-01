@@ -65,6 +65,19 @@ def _measured() -> dict:
 
 # ---------------------------------------------------------------- diagrams
 
+# SVG-only styles: shared by the static page and the live server (the server
+# page does not include _STYLE, so these must ship separately). Font-family is
+# pinned per class because SVG text otherwise inherits the embedding page's body.
+SVG_STYLE = """
+  .box { fill: #fff; stroke: #d7d3cc; stroke-width: 1.2; }
+  .accent { fill: #fdf0ea; stroke: #d97757; }
+  .label { font-size: 12.5px; fill: #1a1a1a; font-weight: 600; font-family: -apple-system, 'Segoe UI', sans-serif; }
+  .small { font-size: 11px; fill: #6b6b6b; font-family: -apple-system, 'Segoe UI', sans-serif; }
+  .tag { font-size: 10.5px; fill: #6b6b6b; font-family: -apple-system, 'Segoe UI', sans-serif; }
+  .edge { stroke: #6b6b6b; stroke-width: 1.2; fill: none; marker-end: url(#arrow); }
+  .edge-dashed { stroke-dasharray: 4 3; }
+"""
+
 _STYLE = """
   body { font-family: -apple-system, 'Segoe UI', sans-serif; background: #faf9f7;
          color: #1a1a1a; margin: 0; padding: 40px; }
@@ -87,14 +100,7 @@ _STYLE = """
           margin: 2px; }
   .good { color: #15803d; font-weight: 600; }
   .bad { color: #b91c1c; font-weight: 600; }
-  .box { fill: #fff; stroke: #d7d3cc; stroke-width: 1.2; rx: 8; }
-  .accent { fill: #fdf0ea; stroke: #d97757; }
-  .label { font-size: 12.5px; fill: #1a1a1a; font-weight: 600; }
-  .small { font-size: 11px; fill: #6b6b6b; }
-  .edge { stroke: #6b6b6b; stroke-width: 1.2; fill: none; marker-end: url(#arrow); }
-  .edge-dashed { stroke-dasharray: 4 3; }
-  .tag { font-size: 10.5px; fill: #6b6b6b; }
-"""
+""" + SVG_STYLE
 
 _ARROW_DEFS = """
   <defs>

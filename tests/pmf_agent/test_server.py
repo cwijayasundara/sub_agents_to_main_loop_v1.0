@@ -102,3 +102,21 @@ def test_proposals_endpoints(monkeypatch, tmp_path):
     assert resp["ok"] is True
     resp = _post(f"{url}/api/proposals", {"action": "apply", "proposal_id": p["proposal_id"]})
     assert resp["ok"] is True and resp["result"]["verified"] is True
+
+
+def test_index_styles_svg_diagrams(monkeypatch, tmp_path):
+    """The live page must style the diagram SVGs (no default-black rects)."""
+    url = next(_start_server(monkeypatch, tmp_path))
+    html = urllib.request.urlopen(f"{url}/", timeout=5).read().decode()
+    assert ".box {" in html and "fill: #fff" in html  # shared SVG style present
+    assert 'class="box"' in html
+    # and the static page still has it
+    from pmf_evals.comparison_page import build_html
+
+    assert ".box {" in build_html()
+
+
+def test_static_and_server_pages_share_svg_style():
+    from pmf_evals.comparison_page import SVG_STYLE, build_html
+
+    assert SVG_STYLE in build_html()

@@ -309,10 +309,14 @@ def make_server(port: int = 8765, agent_factory: str = "live", results_dir: Path
 
 def _page() -> str:
     """The live frontend: diagrams, run buttons, polling state, trace viewer."""
-    return """<!DOCTYPE html>
+    from pmf_evals.comparison_page import SVG_STYLE
+
+    page = """<!DOCTYPE html>
 <html lang="en"><head><meta charset="utf-8">
 <title>pmf_agent live — folded loop vs subagents</title>
 <style>
+/* SVG diagram styles shared with the static comparison page */
+__SVG_STYLE__
   body { font-family: -apple-system, 'Segoe UI', sans-serif; background: #faf9f7; color: #1a1a1a; margin: 0; padding: 32px; }
   h1 { font-size: 24px; font-weight: 600; margin: 0 0 4px; }
   .sub { color: #6b6b6b; font-size: 13.5px; margin-bottom: 24px; }
@@ -455,7 +459,8 @@ function render(s) {
 }
 state();
 </script>
-</body></html>""".replace("__SVG_FOLDED__", _svg_folded()).replace("__SVG_HIER__", _svg_hierarchical())
+</body></html>""".replace("__SVG_FOLDED__", _svg_folded()).replace("__SVG_HIER__", _svg_hierarchical()).replace("__SVG_STYLE__", SVG_STYLE)
+    return page
 
 
 def main(argv: list[str] | None = None) -> int:
