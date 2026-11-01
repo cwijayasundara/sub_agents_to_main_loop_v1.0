@@ -85,6 +85,14 @@ def _cmd_compare(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_report(args: argparse.Namespace) -> int:
+    from .comparison_page import open_page
+
+    path = open_page()
+    print(f"comparison page -> {path}")
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="pmf_evals")
     sub = parser.add_subparsers(dest="cmd", required=True)
@@ -107,6 +115,8 @@ def main(argv: list[str] | None = None) -> int:
     p_cmp.add_argument("run_a")
     p_cmp.add_argument("run_b")
     p_cmp.set_defaults(func=_cmd_compare)
+
+    sub.add_parser("report", help="build + open the architecture comparison page").set_defaults(func=_cmd_report)
 
     args = parser.parse_args(argv)
     return args.func(args)

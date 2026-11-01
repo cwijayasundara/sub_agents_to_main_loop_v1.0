@@ -124,3 +124,15 @@ def test_run_writes_trace_logs(tmp_path):
     assert len(logs) == 15
     content = logs[0].read_text()
     assert "tool" in content.lower() or "answer" in content.lower()
+
+
+def test_report_subcommand(tmp_path, monkeypatch):
+    import pmf_evals.comparison_page as cp
+    from pmf_evals.__main__ import main as cli_main
+
+    written = tmp_path / "comparison.html"
+    monkeypatch.setattr(cp, "PAGE_PATH", written)
+    monkeypatch.setenv("PMF_NO_BROWSER", "1")
+    assert cli_main(["report"]) == 0
+    assert written.exists()
+    assert "Folded single loop" in written.read_text()
