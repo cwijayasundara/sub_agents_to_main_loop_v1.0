@@ -1,0 +1,11 @@
+{
+  "proposal_id": "prop-b6786576",
+  "status": "pending",
+  "platform": "google_ads",
+  "change_type": "add_keywords",
+  "details": "add: paid media analytics (phrase), ppc attribution (phrase), gtm tracking (exact)",
+  "rationale": "top converting campaign, expanding coverage",
+  "submitted_at": "2026-11-01T05:45:39.201175+00:00",
+  "approved_by": null,
+  "approved_at": null
+}
