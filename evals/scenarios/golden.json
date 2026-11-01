@@ -43,7 +43,15 @@
     ],
     "expected_tools": [
       "check_platform_performance",
-      "compare_platform_windows"
+      "compare_platform_windows",
+      "get_metric_totals",
+      "get_weekly_digest",
+      "get_spend_daily",
+      "get_clicks_daily",
+      "get_conversions_daily",
+      "get_metric_momentum",
+      "compare_all_platforms",
+      "get_account_summary"
     ]
   },
   {
@@ -70,7 +78,15 @@
     ],
     "expected_tools": [
       "check_platform_performance",
-      "compare_platform_windows"
+      "compare_platform_windows",
+      "get_metric_totals",
+      "get_weekly_digest",
+      "get_spend_daily",
+      "get_clicks_daily",
+      "get_conversions_daily",
+      "get_metric_momentum",
+      "compare_all_platforms",
+      "get_account_summary"
     ]
   },
   {
@@ -96,7 +112,15 @@
     ],
     "expected_tools": [
       "check_platform_performance",
-      "compare_platform_windows"
+      "compare_platform_windows",
+      "get_metric_totals",
+      "get_weekly_digest",
+      "get_spend_daily",
+      "get_clicks_daily",
+      "get_conversions_daily",
+      "get_metric_momentum",
+      "compare_all_platforms",
+      "get_account_summary"
     ]
   },
   {
@@ -123,7 +147,15 @@
     ],
     "expected_tools": [
       "check_platform_performance",
-      "compare_platform_windows"
+      "compare_platform_windows",
+      "get_metric_totals",
+      "get_weekly_digest",
+      "get_spend_daily",
+      "get_clicks_daily",
+      "get_conversions_daily",
+      "get_metric_momentum",
+      "compare_all_platforms",
+      "get_account_summary"
     ]
   },
   {
@@ -140,6 +172,14 @@
     "expected_tools": [
       "check_platform_performance",
       "compare_platform_windows",
+      "get_metric_totals",
+      "get_weekly_digest",
+      "get_spend_daily",
+      "get_clicks_daily",
+      "get_conversions_daily",
+      "get_metric_momentum",
+      "compare_all_platforms",
+      "get_account_summary",
       "list_platforms"
     ]
   },
@@ -166,7 +206,15 @@
     ],
     "expected_tools": [
       "check_platform_performance",
-      "compare_platform_windows"
+      "compare_platform_windows",
+      "get_metric_totals",
+      "get_weekly_digest",
+      "get_spend_daily",
+      "get_clicks_daily",
+      "get_conversions_daily",
+      "get_metric_momentum",
+      "compare_all_platforms",
+      "get_account_summary"
     ]
   },
   {
@@ -187,7 +235,15 @@
     ],
     "expected_tools": [
       "check_platform_performance",
-      "compare_platform_windows"
+      "compare_platform_windows",
+      "get_metric_totals",
+      "get_weekly_digest",
+      "get_spend_daily",
+      "get_clicks_daily",
+      "get_conversions_daily",
+      "get_metric_momentum",
+      "compare_all_platforms",
+      "get_account_summary"
     ]
   },
   {
@@ -208,7 +264,15 @@
     ],
     "expected_tools": [
       "check_platform_performance",
-      "compare_platform_windows"
+      "compare_platform_windows",
+      "get_metric_totals",
+      "get_weekly_digest",
+      "get_spend_daily",
+      "get_clicks_daily",
+      "get_conversions_daily",
+      "get_metric_momentum",
+      "compare_all_platforms",
+      "get_account_summary"
     ]
   },
   {
@@ -229,7 +293,15 @@
     ],
     "expected_tools": [
       "check_platform_performance",
-      "compare_platform_windows"
+      "compare_platform_windows",
+      "get_metric_totals",
+      "get_weekly_digest",
+      "get_spend_daily",
+      "get_clicks_daily",
+      "get_conversions_daily",
+      "get_metric_momentum",
+      "compare_all_platforms",
+      "get_account_summary"
     ]
   },
   {
@@ -284,7 +356,15 @@
     ],
     "expected_tools": [
       "check_platform_performance",
-      "compare_platform_windows"
+      "compare_platform_windows",
+      "get_metric_totals",
+      "get_weekly_digest",
+      "get_spend_daily",
+      "get_clicks_daily",
+      "get_conversions_daily",
+      "get_metric_momentum",
+      "compare_all_platforms",
+      "get_account_summary"
     ]
   },
   {
@@ -329,7 +409,15 @@
     ],
     "expected_tools": [
       "check_platform_performance",
-      "compare_platform_windows"
+      "compare_platform_windows",
+      "get_metric_totals",
+      "get_weekly_digest",
+      "get_spend_daily",
+      "get_clicks_daily",
+      "get_conversions_daily",
+      "get_metric_momentum",
+      "compare_all_platforms",
+      "get_account_summary"
     ]
   },
   {
@@ -376,7 +464,15 @@
     ],
     "expected_tools": [
       "check_platform_performance",
-      "compare_platform_windows"
+      "compare_platform_windows",
+      "get_metric_totals",
+      "get_weekly_digest",
+      "get_spend_daily",
+      "get_clicks_daily",
+      "get_conversions_daily",
+      "get_metric_momentum",
+      "compare_all_platforms",
+      "get_account_summary"
     ]
   }
 ]

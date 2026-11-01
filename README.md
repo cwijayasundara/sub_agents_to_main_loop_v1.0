@@ -132,3 +132,4 @@ token/cost footprint.
 | 3 Skills + wiki | done | 15/15, q04 closed by the report skill |
 | 4 Approval workflow | done | fail-closed allowlist, verified apply |
 | 5 Architecture A/B | done | **folded wins 15/15 vs 12/15 at 1.8× less latency** |
+| 6 50-tool ceiling | done | **`results/tools50-report.md`: quality holds (14/15) but 2.2× tokens; per-turn LLM selector loses; intent routing + deferred loading are the levers** |
