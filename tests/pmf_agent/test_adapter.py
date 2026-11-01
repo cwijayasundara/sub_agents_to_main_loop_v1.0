@@ -110,3 +110,13 @@ def test_adapter_passes_skills_root():
     adapter.run(Scenario(id="q01_x", entry_point="slack", category="q_and_a", prompt="p"))
     # graph was built with the workspace backend; just proves the wiring accepts it
     assert adapter._skills_root == "workspace"
+
+
+def test_hierarchical_arch_runs():
+    from pmf_agent.adapter import FireworksAgentUnderTest as A
+
+    scenario = Scenario(id="q07_x", entry_point="slack", category="q_and_a", prompt="meta spend last week?")
+    adapter = A(entry_point="slack", model=_fake_model(), arch="hierarchical")
+    result = adapter.run(scenario)
+    assert result.text == "ok"  # fake model answer flows through
+    assert adapter.arch == "hierarchical"

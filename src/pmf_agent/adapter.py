@@ -49,19 +49,39 @@ def extract_usage(messages: list) -> dict[str, int]:
 
 
 class FireworksAgentUnderTest:
-    """AgentUnderTest implementation backed by the folded single loop."""
+    """AgentUnderTest implementation.
 
-    def __init__(self, entry_point: str = "slack", model=None, routed: bool = False, skills_root: str | None = None) -> None:
+    arch: "folded" (single loop, default) or "hierarchical"
+    (parent + per-platform subagents, the PMA's production choice).
+    """
+
+    def __init__(
+        self,
+        entry_point: str = "slack",
+        model=None,
+        routed: bool = False,
+        skills_root: str | None = None,
+        arch: str = "folded",
+    ) -> None:
         if entry_point not in ENTRY_POINTS:
             raise ValueError(f"entry_point must be one of {ENTRY_POINTS}, got {entry_point!r}")
+        if arch not in ("folded", "hierarchical"):
+            raise ValueError(f"arch must be 'folded' or 'hierarchical', got {arch!r}")
         self.entry_point = entry_point
         self._model = model
         self.routed = routed
         self._skills_root = skills_root
+        self.arch = arch
         self._middleware = None
         self._graph = None
 
     def _build(self):
+        if self.arch == "hierarchical":
+            from .subagent_arch import create_hierarchical_agent
+
+            return create_hierarchical_agent(
+                self.entry_point, model=self._model, skills_root=self._skills_root
+            )
         if self.routed:
             from .routing import tool_selection_middleware
 

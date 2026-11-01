@@ -74,3 +74,9 @@ def test_fireworks_skills_registered_lazily():
     from pmf_evals.__main__ import _AGENTS
 
     assert "fireworks-skills" in _AGENTS
+
+
+def test_fireworks_hierarchical_registered_lazily():
+    from pmf_evals.__main__ import _AGENTS
+
+    assert "fireworks-hierarchical" in _AGENTS
