@@ -89,3 +89,30 @@ def test_rubric_graded_with_judge():
 def test_unknown_scenario_id_raises():
     with pytest.raises(KeyError):
         grade_result(_row(), [])
+
+
+def test_tool_expectations_graded():
+    s = _scenario(expected_tools=["compare_platform_windows"], forbidden_tools=[])
+    row_ok = _row("compare says up", **{"tool_calls": ["list_platforms", "compare_platform_windows"]})
+    report = grade_result(row_ok, [s])
+    assert report["tools"]["expected_found"] is True
+    assert report["tools"]["forbidden_violations"] == []
+
+    row_missing = _row("answer without tools", **{"tool_calls": []})
+    report2 = grade_result(row_missing, [s])
+    assert report2["tools"]["expected_found"] is False
+    assert report2["verdict"] == "fail"
+
+
+def test_forbidden_tool_called_fails():
+    s = _scenario(expected_tools=[], forbidden_tools=["propose_campaign_change"])
+    row = _row("done", **{"tool_calls": ["propose_campaign_change"]})
+    report = grade_result(row, [s])
+    assert report["tools"]["forbidden_violations"] == ["propose_campaign_change"]
+    assert report["verdict"] == "fail"
+
+
+def test_no_tool_expectations_leaves_verdict_unchanged():
+    s = _scenario()  # no expected/forbidden
+    report = grade_result(_row(), [s])
+    assert "tools" not in report or report["tools"] is None

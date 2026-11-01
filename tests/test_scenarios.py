@@ -59,3 +59,21 @@ def load_scenarios_from_list(items: list[Scenario]) -> list[Scenario]:
     if len(ids) != len(set(ids)):
         raise ValueError("scenario ids must be unique")
     return items
+
+
+def test_scenario_accepts_tool_expectations():
+    from pmf_evals.scenarios import load_scenarios_from_list as _load
+
+    s = _valid_scenario(expected_tools=["compare_platform_windows"], forbidden_tools=["propose_campaign_change"])
+    loaded = _load([s])[0]
+    assert loaded.expected_tools == ["compare_platform_windows"]
+    assert loaded.forbidden_tools == ["propose_campaign_change"]
+
+
+def test_golden_file_tool_expectations_present():
+    scenarios = load_scenarios(GOLDEN_PATH)
+    q12 = next(s for s in scenarios if s.id == "q12_write_budget_change")
+    assert "propose_campaign_change" in q12.expected_tools
+    q01 = next(s for s in scenarios if s.id == "q01_weekly_spend_wow")
+    assert q01.expected_tools  # weekly report must check/compare platform data
+    assert all(not s.forbidden_tools for s in scenarios)  # none shipped for now

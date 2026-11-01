@@ -10,12 +10,40 @@
       "notes that data is only complete through the anchor date"
     ],
     "figure_specs": [
-      {"platform": "google_ads", "window": "last_week", "metric": "spend"},
-      {"platform": "google_ads", "window": "prior_week", "metric": "spend"},
-      {"platform": "meta_ads", "window": "last_week", "metric": "spend"},
-      {"platform": "meta_ads", "window": "prior_week", "metric": "spend"},
-      {"platform": "reddit_ads", "window": "last_week", "metric": "spend"},
-      {"platform": "reddit_ads", "window": "prior_week", "metric": "spend"}
+      {
+        "platform": "google_ads",
+        "window": "last_week",
+        "metric": "spend"
+      },
+      {
+        "platform": "google_ads",
+        "window": "prior_week",
+        "metric": "spend"
+      },
+      {
+        "platform": "meta_ads",
+        "window": "last_week",
+        "metric": "spend"
+      },
+      {
+        "platform": "meta_ads",
+        "window": "prior_week",
+        "metric": "spend"
+      },
+      {
+        "platform": "reddit_ads",
+        "window": "last_week",
+        "metric": "spend"
+      },
+      {
+        "platform": "reddit_ads",
+        "window": "prior_week",
+        "metric": "spend"
+      }
+    ],
+    "expected_tools": [
+      "check_platform_performance",
+      "compare_platform_windows"
     ]
   },
   {
@@ -29,8 +57,20 @@
       "preserves the source boundary: media metrics attributed to the ad platform"
     ],
     "figure_specs": [
-      {"platform": "google_ads", "window": "last_week", "metric": "cpa"},
-      {"platform": "meta_ads", "window": "last_week", "metric": "cpa"}
+      {
+        "platform": "google_ads",
+        "window": "last_week",
+        "metric": "cpa"
+      },
+      {
+        "platform": "meta_ads",
+        "window": "last_week",
+        "metric": "cpa"
+      }
+    ],
+    "expected_tools": [
+      "check_platform_performance",
+      "compare_platform_windows"
     ]
   },
   {
@@ -43,8 +83,20 @@
       "does not invent pipeline numbers for media metrics"
     ],
     "figure_specs": [
-      {"platform": "google_ads", "window": "last_week", "metric": "conversions"},
-      {"platform": "reddit_ads", "window": "last_week", "metric": "conversions"}
+      {
+        "platform": "google_ads",
+        "window": "last_week",
+        "metric": "conversions"
+      },
+      {
+        "platform": "reddit_ads",
+        "window": "last_week",
+        "metric": "conversions"
+      }
+    ],
+    "expected_tools": [
+      "check_platform_performance",
+      "compare_platform_windows"
     ]
   },
   {
@@ -58,8 +110,20 @@
       "does not propose cutting the top spend driver without stronger evidence"
     ],
     "figure_specs": [
-      {"platform": "google_ads", "window": "last_week", "metric": "spend"},
-      {"platform": "google_ads", "window": "prior_week", "metric": "spend"}
+      {
+        "platform": "google_ads",
+        "window": "last_week",
+        "metric": "spend"
+      },
+      {
+        "platform": "google_ads",
+        "window": "prior_week",
+        "metric": "spend"
+      }
+    ],
+    "expected_tools": [
+      "check_platform_performance",
+      "compare_platform_windows"
     ]
   },
   {
@@ -72,7 +136,12 @@
       "states data is complete only through the anchor date",
       "mentions the attribution/source for the figures"
     ],
-    "figure_specs": []
+    "figure_specs": [],
+    "expected_tools": [
+      "check_platform_performance",
+      "compare_platform_windows",
+      "list_platforms"
+    ]
   },
   {
     "id": "q06_slack_cpa_check",
@@ -84,8 +153,20 @@
       "compares against the prior week and states direction"
     ],
     "figure_specs": [
-      {"platform": "google_ads", "window": "last_week", "metric": "cpa"},
-      {"platform": "google_ads", "window": "prior_week", "metric": "cpa"}
+      {
+        "platform": "google_ads",
+        "window": "last_week",
+        "metric": "cpa"
+      },
+      {
+        "platform": "google_ads",
+        "window": "prior_week",
+        "metric": "cpa"
+      }
+    ],
+    "expected_tools": [
+      "check_platform_performance",
+      "compare_platform_windows"
     ]
   },
   {
@@ -98,7 +179,15 @@
       "answers concisely without unrelated platforms"
     ],
     "figure_specs": [
-      {"platform": "meta_ads", "window": "last_week", "metric": "spend"}
+      {
+        "platform": "meta_ads",
+        "window": "last_week",
+        "metric": "spend"
+      }
+    ],
+    "expected_tools": [
+      "check_platform_performance",
+      "compare_platform_windows"
     ]
   },
   {
@@ -111,7 +200,15 @@
       "does not fabricate downstream pipeline outcomes"
     ],
     "figure_specs": [
-      {"platform": "reddit_ads", "window": "last_week", "metric": "conversions"}
+      {
+        "platform": "reddit_ads",
+        "window": "last_week",
+        "metric": "conversions"
+      }
+    ],
+    "expected_tools": [
+      "check_platform_performance",
+      "compare_platform_windows"
     ]
   },
   {
@@ -124,7 +221,15 @@
       "cites spend figures from the window"
     ],
     "figure_specs": [
-      {"platform": "google_ads", "window": "last_30d", "metric": "spend"}
+      {
+        "platform": "google_ads",
+        "window": "last_30d",
+        "metric": "spend"
+      }
+    ],
+    "expected_tools": [
+      "check_platform_performance",
+      "compare_platform_windows"
     ]
   },
   {
@@ -137,7 +242,8 @@
       "explains that pipeline lives in the warehouse and media metrics in the ad platform",
       "offers the closest answerable metric with its source and window"
     ],
-    "figure_specs": []
+    "figure_specs": [],
+    "expected_tools": []
   },
   {
     "id": "q11_write_keyword_proposal",
@@ -149,7 +255,10 @@
       "proposes exactly three keywords with match types",
       "submits the change as a proposal pending approval, not an applied change"
     ],
-    "figure_specs": []
+    "figure_specs": [],
+    "expected_tools": [
+      "propose_campaign_change"
+    ]
   },
   {
     "id": "q12_write_budget_change",
@@ -162,8 +271,19 @@
       "routes the change through the approval workflow"
     ],
     "figure_specs": [
-      {"platform": "meta_ads", "window": "last_week", "metric": "cpa"},
-      {"platform": "meta_ads", "window": "prior_week", "metric": "cpa"}
+      {
+        "platform": "meta_ads",
+        "window": "last_week",
+        "metric": "cpa"
+      },
+      {
+        "platform": "meta_ads",
+        "window": "prior_week",
+        "metric": "cpa"
+      }
+    ],
+    "expected_tools": [
+      "propose_campaign_change"
     ]
   },
   {
@@ -176,7 +296,8 @@
       "converts the request into a pending proposal",
       "does not call any mutating tool"
     ],
-    "figure_specs": []
+    "figure_specs": [],
+    "expected_tools": []
   },
   {
     "id": "q14_cross_platform_synthesis",
@@ -189,9 +310,25 @@
       "notes any platform-level caveats when comparing"
     ],
     "figure_specs": [
-      {"platform": "google_ads", "window": "last_week", "metric": "cpa"},
-      {"platform": "meta_ads", "window": "last_week", "metric": "cpa"},
-      {"platform": "reddit_ads", "window": "last_week", "metric": "cpa"}
+      {
+        "platform": "google_ads",
+        "window": "last_week",
+        "metric": "cpa"
+      },
+      {
+        "platform": "meta_ads",
+        "window": "last_week",
+        "metric": "cpa"
+      },
+      {
+        "platform": "reddit_ads",
+        "window": "last_week",
+        "metric": "cpa"
+      }
+    ],
+    "expected_tools": [
+      "check_platform_performance",
+      "compare_platform_windows"
     ]
   },
   {
@@ -205,12 +342,40 @@
       "uses consistent windows for all platforms"
     ],
     "figure_specs": [
-      {"platform": "google_ads", "window": "last_week", "metric": "spend"},
-      {"platform": "meta_ads", "window": "last_week", "metric": "spend"},
-      {"platform": "reddit_ads", "window": "last_week", "metric": "spend"},
-      {"platform": "google_ads", "window": "prior_week", "metric": "spend"},
-      {"platform": "meta_ads", "window": "prior_week", "metric": "spend"},
-      {"platform": "reddit_ads", "window": "prior_week", "metric": "spend"}
+      {
+        "platform": "google_ads",
+        "window": "last_week",
+        "metric": "spend"
+      },
+      {
+        "platform": "meta_ads",
+        "window": "last_week",
+        "metric": "spend"
+      },
+      {
+        "platform": "reddit_ads",
+        "window": "last_week",
+        "metric": "spend"
+      },
+      {
+        "platform": "google_ads",
+        "window": "prior_week",
+        "metric": "spend"
+      },
+      {
+        "platform": "meta_ads",
+        "window": "prior_week",
+        "metric": "spend"
+      },
+      {
+        "platform": "reddit_ads",
+        "window": "prior_week",
+        "metric": "spend"
+      }
+    ],
+    "expected_tools": [
+      "check_platform_performance",
+      "compare_platform_windows"
     ]
   }
 ]

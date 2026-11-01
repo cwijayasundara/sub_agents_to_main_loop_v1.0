@@ -53,6 +53,8 @@ class Scenario:
     prompt: str
     rubric: list[str] = field(default_factory=list)
     figure_specs: tuple[FigureSpec, ...] = ()
+    expected_tools: tuple[str, ...] = ()  # pass if ANY of these was called
+    forbidden_tools: tuple[str, ...] = ()  # fail if ANY of these was called
 
     def __post_init__(self) -> None:
         if self.entry_point not in ENTRY_POINTS:
@@ -81,6 +83,8 @@ def _parse(data: dict) -> Scenario:
         prompt=data["prompt"],
         rubric=list(data.get("rubric", [])),
         figure_specs=specs,
+        expected_tools=tuple(data.get("expected_tools", [])),
+        forbidden_tools=tuple(data.get("forbidden_tools", [])),
     )
 
 

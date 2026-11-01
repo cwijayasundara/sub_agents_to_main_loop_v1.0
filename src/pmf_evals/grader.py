@@ -88,10 +88,24 @@ def grade_result(row: dict, scenarios: list[Scenario], judge: Callable[[str, dic
         # no rubric judged (skipped) -> deterministic evidence only
         verdict = "figures_only"
 
+    # routing accuracy: did the agent call the right tool for the intent?
+    tool_calls = row.get("tool_calls", [])
+    tools: dict | None = None
+    if scenario.expected_tools or scenario.forbidden_tools:
+        expected_found = any(t in tool_calls for t in scenario.expected_tools)
+        forbidden_violations = [t for t in scenario.forbidden_tools if t in tool_calls]
+        tools = {
+            "expected_found": expected_found,
+            "forbidden_violations": forbidden_violations,
+        }
+        if (scenario.expected_tools and not expected_found) or forbidden_violations:
+            verdict = "fail"
+
     return {
         "scenario_id": row["scenario_id"],
         "verdict": verdict,
         "figures": figures,
         "rubric": rubric,
+        "tools": tools,
         "error": None,
     }
