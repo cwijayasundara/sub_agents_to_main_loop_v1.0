@@ -12,8 +12,12 @@ def profile_tools(entry_point: str) -> list:
     return [_tool_registry[n] for n in ALL_TOOL_NAMES if n in names]
 
 
-def create_agent(entry_point: str, model=None):
-    """One model, one loop, no subagents; the entry point only changes capabilities."""
+def create_agent(entry_point: str, model=None, middleware=None):
+    """One model, one loop, no subagents; the entry point only changes capabilities.
+
+    `middleware` (e.g. decision_harness ToolSelectionMiddleware) is appended to
+    the deepagents middleware stack.
+    """
     if entry_point not in ENTRY_POINTS:
         raise ValueError(f"entry_point must be one of {ENTRY_POINTS}, got {entry_point!r}")
     from deepagents import create_deep_agent
@@ -23,7 +27,9 @@ def create_agent(entry_point: str, model=None):
         model=model if model is not None else chat_model(),
         tools=tools,
         system_prompt=system_prompt(entry_point),
+        middleware=list(middleware or []),
     )
     # expose the bound tool surface for introspection/tests (setattr verified safe)
     agent.pmf_tools = tools
+    agent.pmf_middleware = list(middleware or [])
     return agent

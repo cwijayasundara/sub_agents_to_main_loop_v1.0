@@ -51,3 +51,24 @@ def test_factory_injects_model():
     m = ChatOpenAI(model="gpt-4o-mini", api_key="test")
     agent = create_agent("slack", model=m)
     assert agent is not None
+
+
+def test_create_agent_accepts_middleware():
+    from decision_harness.middleware.tool_selection import ToolSelectionMiddleware
+
+    from pmf_agent.agent import create_agent
+    from pmf_agent.routing import tool_selection_middleware
+
+    mw = tool_selection_middleware(client=_FakeRoutingClient())
+    agent = create_agent("slack", model=_fake_model(), middleware=[mw])
+    assert agent.pmf_middleware == [mw]
+
+
+class _FakeRoutingClient:
+    zero_data_retention = True
+
+    def post(self, payload):
+        return {"answers": [{"probability": 1.0}]}
+
+    def _parse_tools(self, data, tool_names):
+        return {name: 1.0 for name in tool_names}
